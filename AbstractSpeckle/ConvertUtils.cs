@@ -1,5 +1,6 @@
 ﻿using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
+using SpeckleClient;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,115 +11,173 @@ using System.Threading.Tasks;
 
 namespace SpeckleAbstract
 {
-    /// <summary>
-    /// Standardises object conversion. The SpeckleApiProxy requires a converter object which should derive from this interface.
-    /// </summary>
-    public interface SpeckleConverter
-    {
-        /// <summary>
-        /// Converts a list of objects. 
-        /// </summary>
-        /// <param name="objects">Objects to convert.</param>
-        /// <param name="getEncoded">If true, should return a base64 encoded version of the object as well.</param>
-        /// <returns>A list of dynamic objects.</returns>
-        List<dynamic> convert(IEnumerable<object> objects, bool getEncoded = false);
-        /// <summary>
-        /// Async conversion of a list of objects. Unblocks the main thread if calling straight from gh.
-        /// </summary>
-        /// <param name="objects">Objects to convert.</param>
-        /// <param name="getEncoded">>If true, should return a base64 encoded version of the object as well.</param>
-        /// <returns>A list of dynamic objects.</returns>
-        Task<List<dynamic>> convertAsync(IEnumerable<object> objects, bool getEncoded = false);
-        /// <summary>
-        /// Spits out a string descriptor, ie "grasshopper-converter", or "rhino-converter". Used for reiniatisation of the API Proxy.
-        /// </summary>
-        /// <returns></returns>
-        string serialise();
-    }
 
     /// <summary>
     /// Handles Grasshopper objects: GH_Brep, GH_Mesh, etc. All non-gh specific converting functions are found in the RhinoGeometryConverter class. 
     /// </summary>
-    public class GhConveter : SpeckleConverter
+    public class GhRhConveter : SpeckleConverter
     {
+        /// <summary>
+        /// Keeps track of objects sent in this session, and sends only the ones unsent so far. 
+        /// Reduces some server load and payload size, which makes for more world peace and love in general.
+        /// </summary>
         HashSet<string> sent = new HashSet<string>();
 
-        List<dynamic> SpeckleConverter.convert(IEnumerable<object> objects, bool getEncoded = false)
+        public GhRhConveter(bool _encodeObjectsToSpeckle, bool _encodeObjectsToNative) : base(_encodeObjectsToSpeckle, _encodeObjectsToNative)
+        {
+        }
+
+        // sync method
+        public override List<dynamic> convert(IEnumerable<object> objects)
         {
             List<dynamic> convertedObjects = new List<dynamic>();
             foreach (object o in objects)
             {
-                var myObj = fromGhObject(o, true);
-                var added = sent.Add((string)myObj.hash);
-                if(added) convertedObjects.Add(fromGhObject(o, getEncoded));
+                var myObj = fromGhRhObject(o, encodeObjectsToNative, encodeObjectsToSpeckle);
+
+                if (nonHashedTypes.Contains((string)myObj.type))
+                    convertedObjects.Add(myObj);
+                else
+                {
+                    var added = sent.Add((string)myObj.hash);
+                    if (added)
+                        convertedObjects.Add(myObj);
+                    else
+                        convertedObjects.Add(new { type = myObj.type, hash = myObj.hash });
+                }
             }
 
             return convertedObjects;
         }
 
-        async Task<List<dynamic>> SpeckleConverter.convertAsync(IEnumerable<object> objects, bool getEncoded = false)
+        // async callback
+        public override void convertAsync(IEnumerable<object> objects, Action<List<dynamic>> callback)
+        {
+            callback(this.convert(objects));
+        }
+
+        // async task
+        public override async Task<List<dynamic>> convertAsyncTask(IEnumerable<object> objects)
         {
             return await Task.Run(() =>
             {
-                List<dynamic> convertedObjects = new List<dynamic>();
-                foreach (object o in objects)
-                {
-                    var myObj = fromGhObject(o, true);
-                    var added = sent.Add((string)myObj.hash);
-                    if (added) convertedObjects.Add(fromGhObject(o, getEncoded));
-                }
-
-                return convertedObjects;
+                return convert(objects);
             });
         }
 
-        private static dynamic fromGhObject(object o, bool getEncoded = false)
+        public override object encodeObject(dynamic obj)
         {
-            // baseStuff
+            string type = (string)obj.type;
+            switch(type)
+            {
+                case "Number":
+                    return GhRhConveter.toNumber(obj);
+                default:
+                    return "404";
+            };
+        }
+
+        /// <summary>
+        /// Determines object type and calls the appropriate conversion call. 
+        /// </summary>
+        /// <param name="o">Object to convert.</param>
+        /// <param name="getEncoded">If set to true, will return a base64 encoded value of more complex objects (ie, breps).</param>
+        /// <returns></returns>
+        private static dynamic fromGhRhObject(object o, bool getEncoded = false, bool getAbstract = true)
+        {
+            // grasshopper specific
+            GH_Interval int1d = o as GH_Interval;
+
+            GH_Interval2D int2d = o as GH_Interval2D;
+
+            GH_Colour col = o as GH_Colour;
+
+            // basic stuff
             GH_Number num = o as GH_Number;
             if (num != null)
-                return StandardTypesConverter.fromNumber(num.Value);
+                return SpeckleConverter.fromNumber(num.Value);
 
             GH_Boolean bul = o as GH_Boolean;
             if (bul != null)
-                return StandardTypesConverter.fromBoolean(bul.Value);
+                return SpeckleConverter.fromBoolean(bul.Value);
 
             GH_String str = o as GH_String;
             if (str != null)
-                return StandardTypesConverter.fromString(str.Value);
+                return SpeckleConverter.fromString(str.Value);
 
-            // geometry
+            // simple geometry
             GH_Point point = o as GH_Point;
             if (point != null)
-                return RhinoGeometryConverter.fromPoint(point.Value);
+                return GhRhConveter.fromPoint(point.Value);
 
             GH_Vector vector = o as GH_Vector;
             if (vector != null)
-                return RhinoGeometryConverter.fromVector(vector.Value);
+                return GhRhConveter.fromVector(vector.Value);
+
+            GH_Plane plane = o as GH_Plane;
+            if (plane != null)
+                return GhRhConveter.fromPlane(plane.Value);
 
             GH_Line line = o as GH_Line;
             if (line != null)
-                return RhinoGeometryConverter.fromLine(line.Value);
+                return GhRhConveter.fromLine(line.Value);
+
+            // strange geometry stuff
+            GH_Arc arc = o as GH_Arc;
+            if (arc != null)
+                return GhRhConveter.fromArc(arc.Value);
+
+            GH_Circle circle = o as GH_Circle;
+            if (circle != null)
+                return GhRhConveter.fromCircle(circle.Value);
+
+            GH_Rectangle rectangle = o as GH_Rectangle;
+            if (rectangle != null)
+                return GhRhConveter.fromRectangle(rectangle.Value);
+
+            GH_Box box = o as GH_Box;
+            if (box != null)
+                return GhRhConveter.fromBox(box.Value);
+            if (o is Box)
+                return GhRhConveter.fromBox((Box) o);
+
+            // getting complex 
+            GH_Curve curve = o as GH_Curve;
+            if (curve != null)
+            {
+                Polyline poly;
+                if (curve.Value.TryGetPolyline(out poly))
+                    return GhRhConveter.fromPolyline(poly);
+                return GhRhConveter.fromCurve(curve.Value, getEncoded, getAbstract);
+            }
 
             GH_Surface surface = o as GH_Surface;
             if (surface != null)
-                return RhinoGeometryConverter.fromBrep(surface.Value, getEncoded);
+                return GhRhConveter.fromBrep(surface.Value, getEncoded, getAbstract);
 
             GH_Brep brep = o as GH_Brep;
             if (brep != null)
-                return RhinoGeometryConverter.fromBrep(brep.Value, getEncoded);
+                return GhRhConveter.fromBrep(brep.Value, getEncoded, getAbstract);
 
             GH_Mesh mesh = o as GH_Mesh;
             if (mesh != null)
-                return RhinoGeometryConverter.fromMesh(mesh.Value, false); // meshes to meshes, ashes to ashes, dust to dust
+                return GhRhConveter.fromMesh(mesh.Value);
 
+            // If we reached this place, means we don't know what we're doing...
             return new { type = "404", hash = "404", value = "type not supported" };
         }
+
+        #region Special grasshopper kernel types (non-rhino geometry)
 
         public static dynamic formInterval(GH_Interval interval)
         {
             // TODO
             return new { };
+        }
+
+        public static GH_Interval toInterval(dynamic obj)
+        {
+            return null;
         }
 
         public static dynamic fromInterval2d(GH_Interval2D interval)
@@ -127,49 +186,29 @@ namespace SpeckleAbstract
             return new { };
         }
 
-        public string serialise()
+        public static GH_Interval2D toInterval2d(dynamic obj)
         {
-            return "grasshopper-converter";
+            return null;
         }
 
-    }
+        #endregion
 
+        #region Rhino Geometry Converters
 
-    /// <summary>
-    /// Handles Rhino objects. Probably should use this one inside a scripting component (at least for geometry).
-    /// I hate typecasting. It's a well mess. At least in Grasshopper.
-    /// </summary>
-    public class RhConverter : SpeckleConverter
-    {
-        public List<dynamic> convert(IEnumerable<object> objects, bool getEncoded = false)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<List<dynamic>> convertAsync(IEnumerable<object> objects, bool getEncoded = false)
-        {
-            throw new NotImplementedException();
-        }
-
-        public string serialise()
-        {
-            return "rhino-converter";
-        }
-    }
-
-    /// <summary>
-    /// Handles conversion from base rhino geometry types. 
-    /// </summary>
-    static class RhinoGeometryConverter
-    {
         public static dynamic fromPoint(Point3d o)
         {
             return new
             {
                 type = "Point",
-                hash = "Point." + o.X + "." + o.Y + "." + o.Z,
+                hash = "Point." + "NoHash",
                 value = new { x = o.X, y = o.Y, z = o.Z }
             };
+        }
+
+        public static Point3d toPoint(dynamic o)
+        {
+            // TODO
+            return new Point3d();
         }
 
         public static dynamic fromVector(Vector3d v)
@@ -177,8 +216,30 @@ namespace SpeckleAbstract
             return new
             {
                 type = "Vector",
-                hash = "Vector." + v.X + "." + v.Y + "." + v.Z,
+                hash = "Vector." + "NoHash",
                 value = new { x = v.X, y = v.Y, z = v.Z }
+            };
+        }
+
+        public static Vector3d toVector(dynamic o)
+        {
+            // TODO
+            return new Vector3d();
+        }
+
+        public static dynamic fromPlane(Plane p)
+        {
+            return new
+            {
+                type = "Plane",
+                hash = "Plane." + SpeckleConverter.getHash("RH:::" + SpeckleConverter.getBase64(p)),
+                value = new
+                {
+                    origin = fromPoint(p.Origin),
+                    xdir = fromVector(p.XAxis),
+                    ydir = fromVector(p.YAxis),
+                    normal = fromVector(p.Normal)
+                }
             };
         }
 
@@ -187,7 +248,7 @@ namespace SpeckleAbstract
             return new
             {
                 type = "Line",
-                hash = "Line." + ConvertUtils.getHash(ConvertUtils.getBase64(o)),
+                hash = "Line." + SpeckleConverter.getHash("RH:::" + SpeckleConverter.getBase64(o)),
                 value = new
                 {
                     start = fromPoint(o.From),
@@ -200,117 +261,218 @@ namespace SpeckleAbstract
             };
         }
 
-
-        public static dynamic fromMesh(Mesh o, bool getEncoded)
+        public static Line toLine(dynamic o)
         {
-            var encodedObj = ConvertUtils.getBase64(o);
+            return new Line();
+        }
+
+        public static dynamic fromPolyline(Polyline poly)
+        {
+            var encodedObj = "RH:::" + SpeckleConverter.getBase64(poly.ToNurbsCurve());
+            Rhino.Geometry.AreaMassProperties areaProps = Rhino.Geometry.AreaMassProperties.Compute(poly.ToNurbsCurve());
+            return new
+            {
+                type = "Polyline",
+                hash = "Polyline." + SpeckleConverter.getHash(encodedObj),
+                value = poly,
+                properties = new
+                {
+                    length = poly.Length,
+                    area = areaProps != null ? areaProps.Area : 0,
+                    areaCentroid = areaProps != null ? fromPoint(areaProps.Centroid) : null
+                }
+            };
+        }
+
+        public static Polyline toPolyline(dynamic o)
+        {
+            return new Polyline();
+        }
+
+        public static dynamic fromCurve(Curve o, bool getEncoded, bool getAbstract)
+        {
+            var encodedObj = "RH:::" + SpeckleConverter.getBase64(o);
+            Rhino.Geometry.AreaMassProperties areaProps = Rhino.Geometry.AreaMassProperties.Compute(o);
+            var polyCurve = o.ToPolyline(0, 1, 0, 0, 0, 0.1, 0, 0, true);
+            Polyline poly; polyCurve.TryGetPolyline(out poly);
+            return new
+            {
+                type = "Curve",
+                hash = "Curve." + SpeckleConverter.getHash(encodedObj),
+                value = poly,
+                encodedValue = getEncoded ? encodedObj : "",
+                properties = new
+                {
+                    lenght = o.GetLength(),
+                    area = areaProps != null ? areaProps.Area : 0,
+                    areaCentroid = areaProps != null ? fromPoint(areaProps.Centroid) : null
+                }
+            };
+        }
+
+        public static Curve toCurve(dynamic o)
+        {
+            throw new NotImplementedException();
+        }
+
+        public static dynamic fromMesh(Mesh o)
+        {
+            var encodedObj = "RH:::" + SpeckleConverter.getBase64(o);
+            Rhino.Geometry.VolumeMassProperties volumeProps = Rhino.Geometry.VolumeMassProperties.Compute(o);
+            Rhino.Geometry.AreaMassProperties areaProps = Rhino.Geometry.AreaMassProperties.Compute(o);
 
             return new
             {
                 type = "Mesh",
-                hash = "Mesh." + ConvertUtils.getHash(encodedObj),
-                encodedValue = getEncoded ? encodedObj : "",
+                hash = "Mesh." + SpeckleConverter.getHash(encodedObj),
                 value = new
                 {
                     vertices = o.Vertices,
                     faces = o.Faces,
                     colors = o.VertexColors
+                },
+                properties = new
+                {
+                    volume = volumeProps.Volume,
+                    area = areaProps.Area,
+                    volumeCentroid = fromPoint(volumeProps.Centroid),
+                    areaCentroid = fromPoint(areaProps.Centroid)
                 }
             };
         }
 
-        public static dynamic fromBrep(Brep o, bool getEncoded)
+        public static Mesh toMesh(dynamic o)
         {
-            var encodedObj = ConvertUtils.getBase64(o);
+            throw new NotImplementedException();
+        }
+
+        public static dynamic fromBrep(Brep o, bool getEncoded, bool getAbstract)
+        {
+            var encodedObj = "RH:::" + SpeckleConverter.getBase64(o);
             var ms = getMeshFromBrep(o);
+
+            Rhino.Geometry.VolumeMassProperties volumeProps = Rhino.Geometry.VolumeMassProperties.Compute(o);
+            Rhino.Geometry.AreaMassProperties areaProps = Rhino.Geometry.AreaMassProperties.Compute(o);
+
             return new
             {
                 type = "Brep",
-                hash = "Brep." + ConvertUtils.getHash(encodedObj),
+                hash = "Brep." + SpeckleConverter.getHash(encodedObj),
                 encodedValue = getEncoded ? encodedObj : "",
                 value = new
                 {
                     vertices = ms.Vertices,
                     faces = ms.Faces,
                     colors = ms.VertexColors
+                },
+                properties = new
+                {
+                    volume = volumeProps.Volume,
+                    area = areaProps.Area,
+                    volumeCentroid = fromPoint(volumeProps.Centroid),
+                    areaCentroid = fromPoint(areaProps.Centroid)
                 }
             };
         }
 
-        public static Mesh getMeshFromBrep(Brep b)
+        public static Brep toBrep(dynamic o)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Little utility function
+        /// </summary>
+        /// <param name="b"></param>
+        /// <returns>A joined mesh of all the brep's faces</returns>
+        private static Mesh getMeshFromBrep(Brep b)
         {
             Mesh[] meshes = Mesh.CreateFromBrep(b);
             Mesh joinedMesh = new Mesh();
             foreach (Mesh m in meshes) joinedMesh.Append(m);
             return joinedMesh;
         }
-    }
 
-    static class StandardTypesConverter
-    {
-        public static dynamic fromBoolean(bool b)
+        public static dynamic fromArc(Arc arc)
         {
             return new
             {
-                type = "Boolean",
-                hash = "Boolean." + b.ToString(),
-                value = b ? 1 : 0
+                type = "Arc",
+                hash = "Arc." + SpeckleConverter.getHash("RH:::" + SpeckleConverter.getBase64(arc)),
+                value = new
+                {
+                    center = fromPoint(arc.Center),
+                    plane = fromPlane(arc.Plane),
+                    startAngle = arc.StartAngle,
+                    endAngle = arc.EndAngle
+                }
             };
         }
 
-        public static dynamic fromNumber(double num)
+        public static dynamic fromCircle(Circle circle)
         {
             return new
             {
-                type = "Number",
-                hash = "Number." + num,
-                value = num
+                type = "Circle",
+                hash = "Circle." + SpeckleConverter.getHash("RH:::" + SpeckleConverter.getBase64(circle)),
+                value = new
+                {
+                    center = fromPoint(circle.Center),
+                    normal = fromVector(circle.Plane.Normal),
+                    radius = circle.Radius
+                }
             };
         }
 
-        public static dynamic fromString(string str)
+        public static dynamic fromRectangle(Rectangle3d rect)
         {
             return new
             {
-                type = "String",
-                hash = "String." + str,
-                value = str
+                type = "Rectangle",
+                hash = "Rectangle." + SpeckleConverter.getHash("RH:::" + SpeckleConverter.getBase64(rect)),
+                value = new
+                {
+                    A = rect.Corner(0), // to use fromPoint()
+                    B = rect.Corner(1),
+                    C = rect.Corner(2),
+                    D = rect.Corner(3),
+                    plane = fromPlane(rect.Plane)
+                }
             };
         }
-    }
 
-    static class ConvertUtils
-    {
-        public static string getBase64(object obj)
+        public static dynamic fromBox(Box box)
         {
-            using (MemoryStream ms = new MemoryStream())
+            return new
             {
-                new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter().Serialize(ms, obj);
-                return Convert.ToBase64String(ms.ToArray());
-            }
+                type = "Box",
+                hash = "Box." + SpeckleConverter.getHash("RH:::" + SpeckleConverter.getBase64(box)),
+                value = new
+                {
+                    center = box.Center, // to use fromPoint()
+                    normal = box.Plane.Normal, // use fromVector
+                    plane = box.Plane, // to use fromPlane
+                    X = box.X,
+                    Y = box.Y,
+                    Z = box.Z
+                }
+            };
         }
 
-        public static byte[] getBytes(object obj)
+        #endregion
+
+        #region last things
+
+        public override dynamic description()
         {
-            using (MemoryStream ms = new MemoryStream())
+            return new
             {
-                new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter().Serialize(ms, obj);
-                return ms.ToArray();
-            }
+                type = "grasshopper",
+                encodeObjectsToNative = encodeObjectsToNative,
+                encodeObjectsToSpeckle = encodeObjectsToSpeckle
+            };
         }
 
-        public static string getHash(string str)
-        {
-            byte[] hash;
-            using (MD5 md5 = System.Security.Cryptography.MD5.Create())
-            {
-                hash = md5.ComputeHash(Encoding.UTF8.GetBytes(str));
-                StringBuilder sb = new StringBuilder();
-                foreach (byte b in hash)
-                    sb.Append(b.ToString("X2"));
-
-                return sb.ToString().ToLower();
-            }
-        }
+        #endregion
     }
 }

@@ -44,25 +44,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net40\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="RestSharp, Version=105.2.3.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\RestSharp.105.2.3\lib\net4\RestSharp.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Data.HashFunction.Core, Version=1.8.2.2, Culture=neutral, PublicKeyToken=80c9288e394c1322, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Data.HashFunction.Core.1.8.2.2\lib\net40\System.Data.HashFunction.Core.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Data.HashFunction.Interfaces, Version=1.0.0.2, Culture=neutral, PublicKeyToken=80c9288e394c1322, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Data.HashFunction.Interfaces.1.0.0.2\lib\net40\System.Data.HashFunction.Interfaces.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
+    <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Web" />
     <Reference Include="System.Windows.Forms" />
@@ -81,22 +66,26 @@
       <HintPath>C:\Program Files\Common Files\McNeel\Rhinoceros\5.0\Plug-ins\Grasshopper (b45a29b1-4343-4035-989e-044e8580d9cf)\0.9.76.0\GH_IO.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="websocket-sharp, Version=1.0.2.59611, Culture=neutral, PublicKeyToken=5660b08a1845a91e, processorArchitecture=MSIL">
-      <HintPath>..\packages\WebSocketSharp.1.0.3-rc11\lib\websocket-sharp.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AbstractSender.cs" />
     <Compile Include="AbstractSpeckleInfo.cs" />
-    <Compile Include="AbstractReceiver.cs" />
-    <Compile Include="ConvertUtils.cs" />
-    <Compile Include="SpeckleAPIHelper.cs" />
+    <Compile Include="SpeckleGhReceiverClientExtended.cs" />
+    <Compile Include="SpeckleGhReceiverClient.cs" />
+    <Compile Include="SpeckleGhSenderClient.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SpeckleClient\SpeckleClient.csproj">
+      <Project>{d38d3139-5861-4704-9aa5-950253d96d73}</Project>
+      <Name>SpeckleClient</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SpeckleGhRhConverter\SpeckleGhRhConverter.csproj">
+      <Project>{e967a1e1-37ff-4394-b793-6987a7958016}</Project>
+      <Name>SpeckleGhRhConverter</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
@@ -108,8 +97,7 @@
   -->
   <PropertyGroup>
     <PostBuildEvent>Copy "$(TargetPath)" "$(TargetDir)$(ProjectName).gha"
-copy /Y "$(TargetDir)$(ProjectName).gha" "%25AppData%25\Grasshopper\Libraries\AbstractSpeckle\$(ProjectName).gha"
-Erase "$(TargetPath)"</PostBuildEvent>
+copy /Y "$(TargetDir)$(ProjectName).gha" "%25AppData%25\Grasshopper\Libraries\AbstractSpeckle\$(ProjectName).gha"</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug32|AnyCPU' ">
     <StartArguments>
