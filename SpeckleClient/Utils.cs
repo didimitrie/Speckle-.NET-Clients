@@ -395,6 +395,11 @@ namespace SpeckleClient
         public string encodedValue;
     }
 
+    public class SpeckleMetaObject
+    {
+        public string type;
+    }
+
     /// <summary>
     /// In progress. Not used yet.
     /// </summary>
