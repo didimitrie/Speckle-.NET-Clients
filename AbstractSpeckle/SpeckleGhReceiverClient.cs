@@ -229,6 +229,7 @@ namespace SpeckleAbstract
                     //HIC SVNT DRACONES
                     var tree = new DataTree<object>();
                     var treeTopo = layer.topology.Split(' ');
+                    int subsetCount = 0;
                     foreach (var branch in treeTopo)
                     {
                         if (branch != "")
@@ -241,7 +242,8 @@ namespace SpeckleAbstract
                             GH_Path myPath = new GH_Path(branchIndexes.ToArray());
 
                             for (int i = 0; i < elCount; i++)
-                                tree.EnsurePath(myPath).Add(subset[i]);
+                                tree.EnsurePath(myPath).Add(subset[subsetCount + i]);
+                            subsetCount += elCount;
                         }
                     }
                     DA.SetDataTree(layer.orderIndex, tree);

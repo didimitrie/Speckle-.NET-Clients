@@ -1,5 +1,6 @@
 ﻿using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
+using Rhino.Runtime;
 using SpeckleClient;
 using System;
 using System.Collections.Generic;
@@ -63,63 +64,111 @@ namespace SpeckleGhRhConverter
             callback(this.convert(objects));
         }
 
-        // async task
-        public override async Task<List<SpeckleObject>> convertAsyncTask(IEnumerable<object> objects)
+
+        public override List<SpeckleObjectProperties> getObjectProperties(IEnumerable<object> objects)
         {
-            return await Task.Run(() =>
+            var propertiesList = new List<SpeckleObjectProperties>();
+
+            int k = 0;
+            foreach (object o in objects)
             {
-                return convert(objects);
-            });
+                CommonObject myObj = null;
+
+                GH_Brep brep = o as GH_Brep;
+                if (brep != null)
+                    myObj = brep.Value;
+
+                GH_Surface srf = o as GH_Surface;
+                if (srf != null)
+                    myObj = srf.Value;
+
+                GH_Mesh mesh = o as GH_Mesh;
+                if (mesh != null)
+                    myObj = mesh.Value;
+
+                GH_Curve crv = o as GH_Curve;
+                if (crv != null)
+                    myObj = crv.Value;
+
+                if (myObj != null)
+                    if (myObj.UserDictionary.Keys.Length > 0)
+                        propertiesList.Add(new SpeckleObjectProperties(k, myObj.UserDictionary.ToArray()));
+
+                k++;
+            }
+            return propertiesList;
         }
 
-        /// <summary>
-        /// Encodes an object back to its Rhino/Gh type. 
-        /// </summary>
-        /// <param name="obj">Object to encode.</param>
-        /// <returns>Encoded object.</returns>
-        public override object encodeObject(dynamic obj)
+        // encodes object
+        public override object encodeObject(dynamic obj, dynamic objectProperties = null)
         {
             string type = (string)obj.type;
+            object encodedObject = null;
+
             switch (type)
             {
                 case "Number":
-                    return GhRhConveter.toNumber(obj);
+                    encodedObject = GhRhConveter.toNumber(obj); break;
                 case "Boolean":
-                    return GhRhConveter.toBoolean(obj);
+                    encodedObject = GhRhConveter.toBoolean(obj); break;
                 case "String":
-                    return GhRhConveter.toString(obj);
+                    encodedObject = GhRhConveter.toString(obj); break;
                 case "Point":
-                    return GhRhConveter.toPoint(obj);
+                    encodedObject = GhRhConveter.toPoint(obj); break;
                 case "Vector":
-                    return GhRhConveter.toVector(obj);
+                    encodedObject = GhRhConveter.toVector(obj); break;
                 case "Plane":
-                    return GhRhConveter.toPlane(obj);
+                    encodedObject = GhRhConveter.toPlane(obj); break;
                 case "Line":
-                    return GhRhConveter.toLine(obj);
+                    encodedObject = GhRhConveter.toLine(obj); break;
                 case "Arc":
-                    return GhRhConveter.toArc(obj);
+                    encodedObject = GhRhConveter.toArc(obj); break;
                 case "Circle":
-                    return GhRhConveter.toCircle(obj);
+                    encodedObject = GhRhConveter.toCircle(obj); break;
                 case "Rectangle":
-                    return GhRhConveter.toRectangle(obj);
+                    encodedObject = GhRhConveter.toRectangle(obj); break;
                 case "Box":
-                    return GhRhConveter.toBox(obj);
+                    encodedObject = GhRhConveter.toBox(obj); break;
                 case "Polyline":
-                    return GhRhConveter.toPolyline(obj);
+                    encodedObject = GhRhConveter.toPolyline(obj); break;
                 case "Curve":
-                    return GhRhConveter.toCurve(obj);
+                    encodedObject = GhRhConveter.toCurve(obj); break;
                 case "Brep":
-                    return GhRhConveter.toBrep(obj);
+                    encodedObject = GhRhConveter.toBrep(obj); break;
                 case "Mesh":
-                    return GhRhConveter.toMesh(obj);
+                    encodedObject = GhRhConveter.toMesh(obj); break;
                 // gh types:
                 case "Interval":
-                    return GhRhConveter.toInterval(obj);
+                    encodedObject = GhRhConveter.toInterval(obj); break;
                 case "Interval2d":
-                    return GhRhConveter.toInterval2d(obj);
+                    encodedObject = GhRhConveter.toInterval2d(obj); break;
                 default:
-                    return obj;
+                    encodedObject = obj;
+                    break;
             };
+
+            if (objectProperties == null) return encodedObject;
+
+            CommonObject myObj = encodedObject as CommonObject;
+
+            myObj.UserDictionary.Clear();
+
+            foreach (var kvp in objectProperties.properties)
+            {
+                Nullable<double> xx = null;
+                try
+                {
+                    xx = kvp.Value;
+                }
+                catch { }
+
+                if (xx != null)
+                    myObj.UserDictionary.Set((string)kvp.Key, (double)kvp.Value);
+                else if (kvp.Value is string)
+                    myObj.UserDictionary.Set((string)kvp.Key, (string)kvp.Value);
+            }
+
+            return myObj;
         }
 
         /// <summary>
@@ -130,12 +179,11 @@ namespace SpeckleGhRhConverter
         /// <returns></returns>
         private static SpeckleObject fromGhRhObject(object o, bool getEncoded = false, bool getAbstract = true)
         {
-            // grasshopper specific TODO
             GH_Interval int1d = o as GH_Interval;
             if (int1d != null)
                 return GhRhConveter.fromInterval(int1d.Value);
             if (o is Interval)
-                return GhRhConveter.fromInterval((Interval) o);
+                return GhRhConveter.fromInterval((Interval)o);
 
             GH_Interval2D int2d = o as GH_Interval2D;
             if (int2d != null)
@@ -221,8 +269,8 @@ namespace SpeckleGhRhConverter
                 return GhRhConveter.fromCurve(curve.Value, getEncoded, getAbstract);
             }
 
-            if(o is Polyline)
-                return GhRhConveter.fromPolyline((Polyline) o);
+            if (o is Polyline)
+                return GhRhConveter.fromPolyline((Polyline)o);
             if (o is Curve)
                 return GhRhConveter.fromCurve((Curve)o, getEncoded, getAbstract);
 
@@ -246,45 +294,6 @@ namespace SpeckleGhRhConverter
             return new SpeckleObject() { hash = "404", value = "Type not supported", type = "404" };
         }
 
-        #region Special grasshopper kernel types (non-rhino geometry)
-
-        public static SpeckleObject fromInterval(Interval u)
-        {
-            SpeckleObject obj = new SpeckleObject();
-            obj.value = new ExpandoObject();
-
-            obj.type = "Interval";
-            obj.hash = "NoHash";
-            obj.value.min = u.Min;
-            obj.value.max = u.Max;
-
-            return obj;
-        }
-
-        public static Interval toInterval(dynamic obj)
-        {
-            return new Interval(obj.value.min, obj.value.max);
-        }
-
-        public static SpeckleObject fromInterval2d(UVInterval i)
-        {
-            SpeckleObject obj = new SpeckleObject();
-            obj.value = new ExpandoObject();
-
-            obj.type = "Interval2d";
-            obj.hash = "NoHash";
-            obj.value.u = fromInterval(i.U);
-            obj.value.v = fromInterval(i.V);
-            return obj;
-        }
-
-        public static UVInterval toInterval2d(dynamic obj)
-        {
-            return new UVInterval(toInterval(obj.u), toInterval(obj.v));
-        }
-
-        #endregion
-
         #region Rhino Geometry Converters
 
         public static SpeckleObject fromPoint(Point3d o)
@@ -297,7 +306,6 @@ namespace SpeckleGhRhConverter
             obj.value.x = o.X;
             obj.value.y = o.Y;
             obj.value.z = o.Z;
-
             return obj;
         }
 
@@ -358,7 +366,6 @@ namespace SpeckleGhRhConverter
             obj.value.end = fromPoint(o.To);
 
             obj.properties.length = o.Length;
-
             return obj;
         }
 
@@ -448,7 +455,7 @@ namespace SpeckleGhRhConverter
 
             return obj;
 
-            
+
         }
 
         public static Mesh toMesh(dynamic o)
@@ -457,8 +464,8 @@ namespace SpeckleGhRhConverter
             foreach (var pt in o.value.vertices) mesh.Vertices.Add(toPoint(pt));
             foreach (var cl in o.value.colors) mesh.VertexColors.Add(Color.FromArgb((int)cl));
             foreach (var fa in o.value.faces)
-                if(fa.C == fa.D) mesh.Faces.AddFace(new MeshFace(fa.A, fa.B, fa.C));
-                else mesh.Faces.AddFace(new MeshFace((int) fa.A, (int) fa.B, (int) fa.C, (int) fa.D));
+                if (fa.C == fa.D) mesh.Faces.AddFace(new MeshFace(fa.A, fa.B, fa.C));
+                else mesh.Faces.AddFace(new MeshFace((int)fa.A, (int)fa.B, (int)fa.C, (int)fa.D));
 
             return mesh;
         }
@@ -520,7 +527,7 @@ namespace SpeckleGhRhConverter
             obj.hash = "Arc." + SpeckleConverter.getHash("RH:" + SpeckleConverter.getBase64(arc));
             obj.value.center = fromPoint(arc.Center);
             obj.value.plane = fromPlane(arc.Plane);
-            obj.value.startAngle = arc.StartAngle; 
+            obj.value.startAngle = arc.StartAngle;
             obj.value.endAngle = arc.EndAngle;
             obj.value.startPoint = fromPoint(arc.StartPoint);
             obj.value.midPoint = fromPoint(arc.MidPoint);
@@ -532,7 +539,7 @@ namespace SpeckleGhRhConverter
 
         public static Arc toArc(dynamic o)
         {
-            return new Arc(toPoint(o.value.startPoint), toPoint(o.value.midPoint), toPoint(o.value.endPoint) );
+            return new Arc(toPoint(o.value.startPoint), toPoint(o.value.midPoint), toPoint(o.value.endPoint));
         }
 
         public static SpeckleObject fromCircle(Circle circle)
@@ -608,6 +615,42 @@ namespace SpeckleGhRhConverter
         {
             return new Box(toPlane(o.value.plane), toInterval(o.value.X), toInterval(o.value.Y), toInterval(o.value.Z));
         }
+
+        public static SpeckleObject fromInterval(Interval u)
+        {
+            SpeckleObject obj = new SpeckleObject();
+            obj.value = new ExpandoObject();
+
+            obj.type = "Interval";
+            obj.hash = "NoHash";
+            obj.value.min = u.Min;
+            obj.value.max = u.Max;
+
+            return obj;
+        }
+
+        public static Interval toInterval(dynamic obj)
+        {
+            return new Interval(obj.value.min, obj.value.max);
+        }
+
+        public static SpeckleObject fromInterval2d(UVInterval i)
+        {
+            SpeckleObject obj = new SpeckleObject();
+            obj.value = new ExpandoObject();
+
+            obj.type = "Interval2d";
+            obj.hash = "NoHash";
+            obj.value.u = fromInterval(i.U);
+            obj.value.v = fromInterval(i.V);
+            return obj;
+        }
+
+        public static UVInterval toInterval2d(dynamic obj)
+        {
+            return new UVInterval(toInterval(obj.u), toInterval(obj.v));
+        }
+
 
         #endregion
 

@@ -136,6 +136,7 @@ namespace SpeckleClient
                     new
                     {
                         objects = converter.convert(this.objects),
+                        objectProperties = converter.getObjectProperties(this.objects),
                         layers = layers,
                         streamName = name
                     }

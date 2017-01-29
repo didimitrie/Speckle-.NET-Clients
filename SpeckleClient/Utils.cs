@@ -243,19 +243,14 @@ namespace SpeckleClient
         abstract public List<SpeckleObject> convert(IEnumerable<object> objects);
 
         /// <summary>
-        /// Async conversion of a list of objects. Unblocks the main thread if calling straight from gh.
-        /// Maybe I should make this optional? 
-        /// </summary>
-        /// <param name="objects">Objects to convert.</param>
-        /// <returns>(TASK) A list of dynamic objects.</returns>
-        abstract public Task<List<SpeckleObject>> convertAsyncTask(IEnumerable<object> objects);
-
-        /// <summary>
         /// Async conversion of a list of objects. Returns the result in a callback.
         /// </summary>
         /// <param name="objects">Objects to convert.</param>
         /// <param name="callback">Action to perform with the converted objects.</param>
         abstract public void convertAsync(IEnumerable<object> objects, Action<List<SpeckleObject>> callback);
+
+
+        abstract public List<SpeckleObjectProperties> getObjectProperties(IEnumerable<object> objects);
 
         #endregion
 
@@ -264,7 +259,7 @@ namespace SpeckleClient
         /// </summary>
         /// <param name="myObj">object to encode to native.</param>
         /// <returns></returns>
-        abstract public object encodeObject(dynamic myObj);
+        abstract public object encodeObject(dynamic myObj, dynamic objectProperties = null);
 
         #region standard types
 
@@ -395,9 +390,17 @@ namespace SpeckleClient
         public string encodedValue;
     }
 
-    public class SpeckleMetaObject
+    [Serializable] 
+    public class SpeckleObjectProperties
     {
-        public string type;
+        public int objectIndex;
+        public KeyValuePair<string, object>[] properties;
+
+        public SpeckleObjectProperties(int _objectIndex, KeyValuePair<string, object>[] _properties)
+        {
+            objectIndex = _objectIndex;
+            properties = _properties;
+        }
     }
 
     /// <summary>

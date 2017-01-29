@@ -211,30 +211,46 @@ namespace SpeckleClient
                 return;
             }
 
-            List<object> castObjects = new List<object>();
+            //List<object> castObjects = new List<object>((int) liveUpdate.objects.Count);
+            //for (int i = 0; i < castObjects.Capacity; i++) castObjects.Add("this shouldn't be here.");
 
+            object[] castObjects = new object[(int)liveUpdate.objects.Count];
+
+
+            int k = 0; // current list head
+            int insertionCount = 0; // cast objects head
             foreach (dynamic obj in liveUpdate.objects)
             {
                 getObject(obj as ExpandoObject, (encodedObject) =>
                 {
-                    castObjects.Add(encodedObject);
-                    if (castObjects.Count == (int)liveUpdate.objects.Count)
-                        callback(castObjects);
-                });
+                    if (myprop.objectIndex == k)
+                        prop = myprop;
+                }
+
+                // TODO: Async doesn't guarantee object order anymore.
+                // need to switch toa insertAt(k, obj) list, and pass that through politely to the guy below;
+                getObject(obj as ExpandoObject, k, (encodedObject, index) =>
+                {
+                    castObjects[index] = encodedObject;
+                    if (++insertionCount == (int)liveUpdate.objects.Count)
+                        callback(castObjects.ToList());
+                }, prop as ExpandoObject);
+
+                k++;
             }
         }
 
-        public void getObject(dynamic obj, Action<object> callback)
+        public void getObject(dynamic obj, int index, Action<object,int> callback, dynamic objectProperties = null)
         {
             if (converter.nonHashedTypes.Contains((string)obj.type))
             {
-                callback(converter.encodeObject(obj));
+                callback(converter.encodeObject(obj, objectProperties), index);
                 return;
             }
 
             if (cache.ContainsKey(obj.hash))
             {
-                callback(cache[obj.hash]);
+                callback(cache[obj.hash], index);
                 return;
             }
 
@@ -251,30 +267,30 @@ namespace SpeckleClient
             {
                 if (response.success)
                 {
-                    var castObject = converter.encodeObject(response.obj);
-                    var cacheAdded = false;
-                    try
-                    {
-                        cache.Add((string)obj.hash, castObject);
-                        cacheAdded = true;
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.WriteLine("Cache already contained said object." + e.ToString());
-                    };
+                    var castObject = converter.encodeObject(response.obj, objectProperties);
+                    //var cacheAdded = false;
+                    //try
+                    //{
+                    //    cache.Add((string)obj.hash, castObject);
+                    //    cacheAdded = true;
+                    //}
+                    //catch (Exception e)
+                    //{
+                    //    Debug.WriteLine("Cache already contained said object." + e.ToString());
+                    //};
 
-                    if(cacheAdded) cacheKeys.Add((string)obj.hash);
+                    //if(cacheAdded) cacheKeys.Add((string)obj.hash);
 
-                    if (cache.Count >= maxCacheEl)
-                    {
-                        cache.Remove(cacheKeys.First());
-                        cacheKeys.RemoveAt(0);
-                    }
+                    //if (cache.Count >= maxCacheEl)
+                    //{
+                    //    cache.Remove(cacheKeys.First());
+                    //    cacheKeys.RemoveAt(0);
+                    //}
 
-                    callback(castObject);
+                    callback(castObject, index);
                 }
                 else
-                    callback("Failed to retrieve object from server: " + response.objectHash);
+                    callback("Failed to retrieve object from server: " + response.objectHash, index);
             });
         }
 
