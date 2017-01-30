@@ -63,6 +63,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="GetUserDataComponent.cs" />
+    <Compile Include="FilterUserDataComponent.cs" />
     <Compile Include="SetUserDataComponent.cs" />
     <Compile Include="UserDataUtilsInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
