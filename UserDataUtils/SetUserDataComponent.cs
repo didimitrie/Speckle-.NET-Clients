@@ -12,7 +12,7 @@ using Rhino.Runtime;
 
 namespace UserDataUtils
 {
-    public class UserDataUtilsComponent : GH_Component, IGH_VariableParameterComponent
+    public class SetUserDataComponent : GH_Component, IGH_VariableParameterComponent
     {
         /// <summary>
         /// Each implementation of GH_Component must provide a public 
@@ -21,7 +21,7 @@ namespace UserDataUtils
         /// Subcategory the panel. If you use non-existing tab or panel names, 
         /// new tabs/panels will automatically be created.
         /// </summary>
-        public UserDataUtilsComponent()
+        public SetUserDataComponent()
           : base("Set User Data", "SUD",
               "Sets User Data",
               "Speckle", "User Data Utils")
@@ -124,6 +124,10 @@ namespace UserDataUtils
             GH_Surface srf = obj as GH_Surface;
             if (srf != null)
                 myObj = srf.Value;
+
+            GH_Box box = obj as GH_Box;
+            if (box != null)
+                myObj = box.Value.ToBrep();
 
             GH_Curve crv = obj as GH_Curve;
             if (crv != null)
