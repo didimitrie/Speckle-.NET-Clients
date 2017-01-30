@@ -221,7 +221,9 @@ namespace SpeckleClient
             int insertionCount = 0; // cast objects head
             foreach (dynamic obj in liveUpdate.objects)
             {
-                getObject(obj as ExpandoObject, (encodedObject) =>
+                // check if we have a user prop
+                dynamic prop = null;
+                foreach(var myprop in liveUpdate.objectProperties)
                 {
                     if (myprop.objectIndex == k)
                         prop = myprop;
@@ -229,18 +231,18 @@ namespace SpeckleClient
 
                 // TODO: Async doesn't guarantee object order anymore.
                 // need to switch toa insertAt(k, obj) list, and pass that through politely to the guy below;
-                getObject(obj as ExpandoObject, k, (encodedObject, index) =>
+                getObject(obj as ExpandoObject, prop as ExpandoObject, k, (encodedObject, index) =>
                 {
                     castObjects[index] = encodedObject;
                     if (++insertionCount == (int)liveUpdate.objects.Count)
                         callback(castObjects.ToList());
-                }, prop as ExpandoObject);
+                });
 
                 k++;
             }
         }
 
-        public void getObject(dynamic obj, int index, Action<object,int> callback, dynamic objectProperties = null)
+        public void getObject(dynamic obj, dynamic objectProperties, int index, Action<object,int> callback)
         {
             if (converter.nonHashedTypes.Contains((string)obj.type))
             {
@@ -268,24 +270,24 @@ namespace SpeckleClient
                 if (response.success)
                 {
                     var castObject = converter.encodeObject(response.obj, objectProperties);
-                    //var cacheAdded = false;
-                    //try
-                    //{
-                    //    cache.Add((string)obj.hash, castObject);
-                    //    cacheAdded = true;
-                    //}
-                    //catch (Exception e)
-                    //{
-                    //    Debug.WriteLine("Cache already contained said object." + e.ToString());
-                    //};
+                    var cacheAdded = false;
+                    try
+                    {
+                        cache.Add((string)obj.hash, castObject);
+                        cacheAdded = true;
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.WriteLine("Cache already contained said object." + e.ToString());
+                    };
 
-                    //if(cacheAdded) cacheKeys.Add((string)obj.hash);
+                    if (cacheAdded) cacheKeys.Add((string)obj.hash);
 
-                    //if (cache.Count >= maxCacheEl)
-                    //{
-                    //    cache.Remove(cacheKeys.First());
-                    //    cacheKeys.RemoveAt(0);
-                    //}
+                    if (cache.Count >= maxCacheEl)
+                    {
+                        cache.Remove(cacheKeys.First());
+                        cacheKeys.RemoveAt(0);
+                    }
 
                     callback(castObject, index);
                 }
