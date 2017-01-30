@@ -107,7 +107,7 @@ namespace UserDataUtils
             DA.GetData(0, ref obj);
 
             // Remarks:
-            // 1) why lines, rectangles or any rhinocommon object can't have user dicts?
+            // 1) why lines, rectangles or *any* rhinocommon object can't have user dicts?
             // 2) @David: i hate grasshopper typecasting and the hassle below
             // (why isn't there a GH_DefaultType, where i can access the .Value regardless of type...?)
 
@@ -137,7 +137,17 @@ namespace UserDataUtils
             if (rect != null)
                 myObj = rect.Value.ToNurbsCurve();
 
-            if (myObj == null) return;
+            GH_Circle circle = obj as GH_Circle;
+            if (circle != null)
+                myObj = circle.Value.ToNurbsCurve();
+
+            if (myObj == null)
+            {
+                // get the object out
+                DA.SetData(0, obj);
+                this.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Failed to set user dictionary to object. Probably an unsupported type.");
+                return;
+            }
 
             myObj.UserDictionary.Clear();
 

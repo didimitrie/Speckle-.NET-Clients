@@ -149,8 +149,18 @@ namespace SpeckleGhRhConverter
 
             if (objectProperties == null) return encodedObject;
 
-            CommonObject myObj = encodedObject as CommonObject;
+            // try and cast
+            CommonObject myObj = null;
 
+            // polyline special cases yay
+            if (type == "Polyline")
+                myObj = ((Polyline)encodedObject).ToNurbsCurve();
+            else 
+                myObj = encodedObject as CommonObject;
+
+            // if still null get outta here
+            if (myObj == null) return encodedObject;
+           
             myObj.UserDictionary.Clear();
 
             foreach (var kvp in objectProperties.properties)
