@@ -42,7 +42,8 @@ namespace SpeckleClient
         /// <summary>
         /// Event emitted when a volatile message was received.
         /// </summary>
-        public event SpeckleEvents OnVolatileMessage;
+        public event SpeckleEvents OnMessage;
+        public event SpeckleEvents OnBroadcast; // do we need the separation? maybe yeah
 
         public event SpeckleEvents OnData;
         public event SpeckleEvents OnMetadata;
@@ -158,9 +159,15 @@ namespace SpeckleClient
                     return;
                 }
 
+                if (message.eventName == "volatile-broadcast")
+                {
+                    OnBroadcast?.Invoke(this, new SpeckleEventArgs("volatile-broadcast", message));
+                    return;
+                }
+
                 if (message.eventName == "volatile-message")
                 {
-                    OnVolatileMessage?.Invoke(this, new SpeckleEventArgs("volatile-message", message));
+                    OnMessage?.Invoke(this, new SpeckleEventArgs("volatile-message", message));
                     return;
                 }
 

@@ -87,6 +87,10 @@ namespace SpeckleAbstract
                 Debug.WriteLine("Data was sent. Stop the loading bar :) Wait. What loading bar? The one luis wanted! Where is it? I dunno");
             };
 
+
+            mySender.OnMessage += OnVolatileMessage;
+            mySender.OnBroadcast += OnBroadcast;
+
             expireComponentAction = () => this.ExpireSolution(true);
 
             // events on objects
@@ -95,6 +99,16 @@ namespace SpeckleAbstract
             // events on parameters
             foreach (var param in Params.Input)
                 param.ObjectChanged += (sender, e) => updateMetadata();
+        }
+
+        public virtual void OnVolatileMessage(object source, SpeckleEventArgs e)
+        {
+            Debug.WriteLine("[Gh Sender] Got a volatile message. Extend this class and implement custom protocols at ease.");
+        }
+
+        public virtual void OnBroadcast(object source, SpeckleEventArgs e)
+        {
+            Debug.WriteLine("[Gh Sender] Got a volatile broadcast. Extend this class and implement custom protocols at ease.");
         }
 
         public override void RemovedFromDocument(GH_Document document)

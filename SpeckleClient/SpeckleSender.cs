@@ -42,7 +42,8 @@ namespace SpeckleClient
         /// <summary>
         /// Event emitted when a volatile message was received.
         /// </summary>
-        public event SpeckleEvents OnVolatileMessage;
+        public event SpeckleEvents OnMessage;
+        public event SpeckleEvents OnBroadcast;
         /// <summary>
         /// Event emitted when an api call returns.
         /// </summary>
@@ -213,9 +214,14 @@ namespace SpeckleClient
 
                 if (message.eventName == "volatile-message")
                 {
-                    OnVolatileMessage?.Invoke(this, new SpeckleEventArgs("volatile-message", message));
+                    OnMessage?.Invoke(this, new SpeckleEventArgs("volatile-message", message));
+                    return;
                 }
 
+                if( message.eventName == "volatile-broadcast")
+                {
+                    OnBroadcast?.Invoke(this, new SpeckleEventArgs("volatile-broadcast", message));
+                }
             };
 
             ws.Connect();
@@ -261,7 +267,12 @@ namespace SpeckleClient
         /// Sends a volatile message that will be broadcast to this stream's clients.
         /// </summary>
         /// <param name="message">Message to broadcast.</param>
-        public void sendVolatile(string message)
+        public void broadcastVolatileMessage(string message)
+        {
+            this.ws.Send(JsonConvert.SerializeObject(new { eventName = "volatile-broadcast", args = message }));
+        }
+
+        public void sendVolatileMessage(string message, string socketId)
         {
             this.ws.Send(JsonConvert.SerializeObject(new { eventName = "volatile-message", args = message }));
         }

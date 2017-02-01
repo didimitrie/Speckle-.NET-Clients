@@ -118,7 +118,7 @@ namespace SpeckleAbstract
                 Debug.WriteLine("No streamId to listen to.");
                 return;
             }
-            else if ((inputId != streamId) && (inputId!=null))
+            else if ((inputId != streamId) && (inputId != null))
             {
                 Debug.WriteLine("changing streamid");
                 streamId = inputId;
@@ -174,18 +174,19 @@ namespace SpeckleAbstract
                 Debug.WriteLine("Received history update event: " + e.EventInfo);
             };
 
-            myReceiver.OnVolatileMessage += OnVolatileMessage;
+            myReceiver.OnMessage += OnVolatileMessage;
+            myReceiver.OnBroadcast += OnBroadcast;
         }
 
         public virtual void OnVolatileMessage(object source, SpeckleEventArgs e)
         {
-            Debug.WriteLine("Got a volatile message.");
+            Debug.WriteLine("[Gh Receiver] Got a volatile message. Extend this class and implement custom protocols at ease.");
         }
-        //public void OnVolatileMessage(object source, SpeckleEventArgs e)
-        //{
-        //    Debug.WriteLine("RECEIVER: got volatile message: " + e.EventInfo);
-        //    Debug.WriteLine((string)e.Data);
-        //}
+
+        public virtual void OnBroadcast(object source, SpeckleEventArgs e)
+        {
+            Debug.WriteLine("[Gh Receiver] Got a volatile broadcast. Extend this class and implement custom protocols at ease.");
+        }
 
         public void diffStructure(List<SpeckleLayer> newLayers)
         {
