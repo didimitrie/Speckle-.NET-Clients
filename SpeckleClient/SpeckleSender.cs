@@ -264,20 +264,6 @@ namespace SpeckleClient
         }
 
         /// <summary>
-        /// Sends a volatile message that will be broadcast to this stream's clients.
-        /// </summary>
-        /// <param name="message">Message to broadcast.</param>
-        public void broadcastVolatileMessage(string message)
-        {
-            this.ws.Send(JsonConvert.SerializeObject(new { eventName = "volatile-broadcast", args = message }));
-        }
-
-        public void sendVolatileMessage(string message, string socketId)
-        {
-            this.ws.Send(JsonConvert.SerializeObject(new { eventName = "volatile-message", args = message }));
-        }
-
-        /// <summary>
         /// Saves instance to the stream history.
         /// </summary>
         /// <param name="name">A specific name to save it by.</param>
@@ -301,6 +287,22 @@ namespace SpeckleClient
         }
 
         #endregion;
+
+        #region volatile messaging
+        /// <summary>
+        /// Sends a volatile message that will be broadcast to this stream's clients.
+        /// </summary>
+        /// <param name="message">Message to broadcast.</param>
+        public void broadcastVolatileMessage(string message)
+        {
+            this.ws.Send(JsonConvert.SerializeObject(new { eventName = "volatile-broadcast", args = message }));
+        }
+
+        public void sendVolatileMessage(string message, string socketId)
+        {
+            this.ws.Send(JsonConvert.SerializeObject(new { eventName = "volatile-message", args = message }));
+        }
+        #endregion
 
         public override string ToString()
         {
