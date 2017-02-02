@@ -353,9 +353,10 @@ namespace SpeckleClient
             {
                 //server.apiCall(@"/api/stream", Method.DELETE, etc, etc 
             }
-            ws.Close();
-            wsReconnecter.Dispose();
-            isReadyCheck.Dispose();
+
+            if (ws != null) ws.Close();
+            if (wsReconnecter != null) wsReconnecter.Dispose();
+            if (isReadyCheck != null) isReadyCheck.Dispose();
         }
     }
 }

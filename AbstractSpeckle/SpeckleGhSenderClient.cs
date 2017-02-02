@@ -71,7 +71,7 @@ namespace SpeckleAbstract
                 //mySender = new SpeckleSender(new SpeckleServer(@"https://5th.one", @"wss://5th.one", "asdf"), new GhConveter()); 
 
                 // local testing:
-                mySender = new SpeckleSender(new SpeckleServer(@"http://10.211.55.2:8080", @"ws://10.211.55.2:8080", "asdf"), new GhRhConveter(true, true));
+                mySender = new SpeckleSender(new SpeckleServer(@"http://10.211.55.2:8080", @"ws://10.211.55.2:8080", "09babdf5b04a40d58327e9dcdd582417"), new GhRhConveter(true, true));
             }
 
             mySender.OnReady += (sender, e) =>

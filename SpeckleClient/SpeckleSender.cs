@@ -60,7 +60,7 @@ namespace SpeckleClient
             server = _server;
             converter = _converter;
             this.setup();
-            
+
         }
 
         /// <summary>
@@ -85,12 +85,12 @@ namespace SpeckleClient
         {
             server.apiCall(@"/api/handshake", Method.POST, null, (success, response) =>
             {
-                if (!success) throw new Exception("Handshake failed.");
+                if (!response.success) throw new Exception("Handshake failed.");
 
                 if (server.streamId == null) // => create a new stream
                     server.apiCall(@"/api/stream", Method.POST, null, (success_stream, response_stream) =>
                     {
-                        if (!success_stream)
+                        if (!response_stream.success)
                         {
                             throw new Exception("Failed to create a new stream.");
                         }
@@ -218,7 +218,7 @@ namespace SpeckleClient
                     return;
                 }
 
-                if( message.eventName == "volatile-broadcast")
+                if (message.eventName == "volatile-broadcast")
                 {
                     OnBroadcast?.Invoke(this, new SpeckleEventArgs("volatile-broadcast", message));
                 }
@@ -324,15 +324,16 @@ namespace SpeckleClient
         /// </summary>
         public void Dispose(bool delete = false)
         {
-            if(delete)
+            if (delete)
             {
                 //server.apiCall(@"/api/stream", Method.DELETE, etc, etc) 
             }
-            ws.Close();
-            DataSender.Dispose();
-            MetadataSender.Dispose();
-            wsReconnecter.Dispose();
-            isReadyCheck.Dispose();
+
+            if (ws != null) ws.Close();
+            if (DataSender != null) DataSender.Dispose();
+            if (MetadataSender != null) MetadataSender.Dispose();
+            if (wsReconnecter != null) wsReconnecter.Dispose();
+            if (isReadyCheck != null) isReadyCheck.Dispose();
         }
     }
 }
