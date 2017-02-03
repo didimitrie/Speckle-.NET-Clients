@@ -15,6 +15,7 @@ using SpeckleGhRhConverter;
 using System.Dynamic;
 using System.ComponentModel;
 using System.Linq;
+using System.Windows.Forms;
 
 namespace SpeckleAbstract
 {
@@ -123,6 +124,15 @@ namespace SpeckleAbstract
                 mySender.Dispose();
 
             base.DocumentContextChanged(document, context);
+        }
+
+        public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
+        {
+            base.AppendAdditionalMenuItems(menu);
+            GH_DocumentObject.Menu_AppendItem(menu, @"Save current state", (sender, e) =>
+            {
+                mySender.saveToHistory();
+            });
         }
 
         /// <summary>

@@ -267,9 +267,15 @@ namespace SpeckleClient
         /// Saves instance to the stream history.
         /// </summary>
         /// <param name="name">A specific name to save it by.</param>
-        public void saveToHistory(string name = "No Name")
+        public void saveToHistory(string name = "History")
         {
-            throw new NotImplementedException();
+            server.apiCall(@"/api/history", Method.POST, null, (success, response) => 
+            {
+                Debug.WriteLine("Saved. Hopefully.");
+                Debug.WriteLine((string) response.message);
+                OnDataSent?.Invoke(this, new SpeckleEventArgs("history-update", response));
+            });
+            //throw new NotImplementedException();
         }
 
         /// <summary>

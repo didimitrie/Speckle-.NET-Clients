@@ -123,7 +123,7 @@ namespace SpeckleAbstract
                 Debug.WriteLine("changing streamid");
                 streamId = inputId;
                 if (myReceiver != null) myReceiver.Dispose();
-                myReceiver = new SpeckleReceiver(new SpeckleServer(@"http://10.211.55.2:8080", @"ws://10.211.55.2:8080", "asdf", streamId), new GhRhConveter(true, true));
+                myReceiver = new SpeckleReceiver(new SpeckleServer(@"http://10.211.55.2:8080", @"ws://10.211.55.2:8080", "09babdf5b04a40d58327e9dcdd582417", streamId), new GhRhConveter(true, true));
                 registermyReceiverEvents();
                 Message = "";
                 return;
