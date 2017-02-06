@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using Grasshopper.Kernel.Types;
 using Rhino.Runtime;
+using Rhino.Collections;
 
 namespace UserDataUtils
 {
@@ -163,9 +164,6 @@ namespace UserDataUtils
 
                 if (value != null)
                 {
-                    // What can we query easily in a database? 
-                    // strings and numbers
-                    // Therefore, we don't do anyhting else
                     GH_Number nmb = value as GH_Number;
                     if (nmb!=null)
                         myObj.UserDictionary.Set(key, nmb.Value);
@@ -180,6 +178,17 @@ namespace UserDataUtils
 
                     if (value is string)
                         myObj.UserDictionary.Set(key, (string)value);
+
+                    GH_ObjectWrapper temp = value as GH_ObjectWrapper;
+                    if (temp != null)
+                    {
+                        ArchivableDictionary dict = ((GH_ObjectWrapper)value).Value as ArchivableDictionary;
+                        if (dict != null)
+                            myObj.UserDictionary.Set(key, dict);
+                    }
+
+                    if (!myObj.UserDictionary.ContainsKey(key))
+                        this.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, key + " could not be set. Strings, numbers and ArchivableDictionary are the supported types.");
                 }
 
             }
