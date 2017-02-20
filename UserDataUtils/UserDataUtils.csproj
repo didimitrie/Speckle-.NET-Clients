@@ -67,6 +67,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CreateUserData.cs" />
+    <Compile Include="CsvUserData.cs" />
     <Compile Include="GetUserDataComponent.cs" />
     <Compile Include="FilterUserDataComponent.cs" />
     <Compile Include="ExpandUserDataComponent.cs" />
