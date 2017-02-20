@@ -24,7 +24,7 @@ namespace UserDataUtils
         /// </summary>
         public SetUserDataComponent()
           : base("Set User Data", "SUD",
-              "Sets User Data",
+              "Sets user data to an object.",
               "Speckle", "User Data Utils")
         {
         }
@@ -73,7 +73,7 @@ namespace UserDataUtils
             param.Name = GH_ComponentParamServer.InventUniqueNickname("ABCDEFGHIJKLMNOPQRSTUVWXYZ", Params.Input);
             param.NickName = param.Name;
             param.Description = "Property Name";
-            param.Optional = true;
+            param.Optional = false;
             param.Access = GH_ParamAccess.item;
 
             param.ObjectChanged += (sender, e) =>

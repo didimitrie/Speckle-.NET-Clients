@@ -16,10 +16,23 @@ namespace UserDataUtils
         /// Initializes a new instance of the CreateUserData class.
         /// </summary>
         public CreateUserData()
-          : base("CreateUserData", "CUD",
-              "Creates a custom user data object (expandooooobject)",
+          : base("Create Custom User Data", "CUD",
+              "Creates a custom user dictionary which you can nest in another dictionary.",
               "Speckle", "User Data Utils")
         {
+        }
+
+        public override void AddedToDocument(GH_Document document)
+        {
+            base.AddedToDocument(document);
+            foreach(var param in Params.Input)
+            {
+                param.ObjectChanged += (sender, e) =>
+                {
+                    Debug.WriteLine("(CUD:) param changed name.");
+                    Rhino.RhinoApp.MainApplicationWindow.Invoke((Action)delegate { this.ExpireSolution(true); });
+                };
+            }
         }
 
         /// <summary>
@@ -27,6 +40,7 @@ namespace UserDataUtils
         /// </summary>
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
+            pManager.AddGenericParameter("A", "A", "Data to attach to this key.", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -43,12 +57,6 @@ namespace UserDataUtils
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-
-            object obj = null;
-            DA.GetData(0, ref obj);
-
-            if (obj == null) return;
-
             var props = new ArchivableDictionary();
 
             for (int i = 0; i < Params.Input.Count; i++)
@@ -109,7 +117,7 @@ namespace UserDataUtils
             param.Name = GH_ComponentParamServer.InventUniqueNickname("ABCDEFGHIJKLMNOPQRSTUVWXYZ", Params.Input);
             param.NickName = param.Name;
             param.Description = "Property Name";
-            param.Optional = true;
+            param.Optional = false;
             param.Access = GH_ParamAccess.item;
 
             param.ObjectChanged += (sender, e) =>
