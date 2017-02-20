@@ -17,7 +17,7 @@ namespace UserDataUtils
         /// </summary>
         public GetUserDataComponent()
           : base("Get User Data", "GUD",
-              "Gets User Data",
+              "Gets the user data attached to an object, if any.",
               "Speckle", "User Data Utils")
         {
         }
@@ -35,8 +35,7 @@ namespace UserDataUtils
         /// </summary>
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("Keys", "K", "UserDictionary Keys", GH_ParamAccess.list);
-            pManager.AddGenericParameter("Values", "V", "UserDictionary Values", GH_ParamAccess.list);
+            pManager.AddGenericParameter("User Dictionary", "D", "User Dictionary", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -47,7 +46,7 @@ namespace UserDataUtils
         {
             object o = null;
             DA.GetData(0, ref o);
-            if(o == null) { AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Failed to get object"); return; }
+            if (o == null) { AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Failed to get object"); return; }
 
             CommonObject myObj = null;
 
@@ -67,19 +66,21 @@ namespace UserDataUtils
             if (crv != null)
                 myObj = crv.Value;
 
-            if(myObj == null) { AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Failed to get object"); return; }
-
-            if(myObj.UserDictionary == null) { AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Object has no user dictionary."); return; }
-
-            //
-            var myList = new List<object>();
-            foreach( var key in myObj.UserDictionary.Keys)
+            if (myObj == null)
             {
-                myList.Add(myObj.UserDictionary[key]);
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Failed to get object");
+                DA.SetData(0, null);
+                return;
             }
 
-            DA.SetDataList(0, myObj.UserDictionary.Keys);
-            DA.SetDataList(1, myList);
+            if (myObj.UserDictionary == null)
+            {
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Object has no user dictionary.");
+                DA.SetData(0, null);
+                return;
+            }
+
+            DA.SetData(0, myObj.UserDictionary);
         }
 
         /// <summary>
