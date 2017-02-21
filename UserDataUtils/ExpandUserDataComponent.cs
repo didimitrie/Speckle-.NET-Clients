@@ -15,7 +15,7 @@ namespace UserDataUtils
     public class ExpandUserDataComponent : GH_Component, IGH_VariableParameterComponent
     {
         Dictionary<string, List<object>> global;
-        Action expireComponent;
+        Action expireComponent, setInputsAndExpireComponent;
 
         /// <summary>
         /// Initializes a new instance of the MyComponent1 class.
@@ -27,7 +27,33 @@ namespace UserDataUtils
         {
             expireComponent = () =>
             {
+                this.ExpireSolution(true);
+            };
 
+            setInputsAndExpireComponent = () =>
+            {
+                for (int i = Params.Output.Count - 1; i >= 0; i--)
+                {
+                    var myParam = Params.Output[i];
+                    if ((!global.Keys.Contains(myParam.Name)) || (!global.Keys.Contains(myParam.NickName)))
+                    {
+                        Params.UnregisterOutputParameter(myParam, true);
+                    }
+                }
+
+                Params.OnParametersChanged();
+                foreach (var key in global.Keys)
+                {
+                    var myparam = Params.Output.FirstOrDefault(q => q.Name == key);
+                    if (myparam == null)
+                    {
+                        Param_GenericObject newParam = getGhParameter(key);
+                        Params.RegisterOutputParam(newParam);
+                    }
+                }
+
+                Params.OnParametersChanged();
+                //end
                 this.ExpireSolution(true);
             };
         }
@@ -119,31 +145,7 @@ namespace UserDataUtils
 
             if (changed)
             {
-                this.OnPingDocument().ScheduleSolution(10, cbdoc =>
-                {
-
-                    for (int i = Params.Output.Count - 1; i >= 0; i--)
-                    {
-                        var myParam = Params.Output[i];
-                        if ((!global.Keys.Contains(myParam.Name))||(!global.Keys.Contains(myParam.NickName)))
-                        {
-                            Params.UnregisterOutputParameter(myParam, true);
-                        }
-                    }
-
-                    Params.OnParametersChanged();
-                    foreach (var key in global.Keys)
-                    {
-                        var myparam = Params.Output.FirstOrDefault(q => q.Name == key);
-                        if (myparam == null)
-                        {
-                            Param_GenericObject newParam = getGhParameter(key);
-                            Params.RegisterOutputParam(newParam);
-                        }
-                    }
-                    Params.OnParametersChanged();
-                    Rhino.RhinoApp.MainApplicationWindow.Invoke(expireComponent);
-                });
+                Rhino.RhinoApp.MainApplicationWindow.Invoke(setInputsAndExpireComponent);
             }
             else
             {
