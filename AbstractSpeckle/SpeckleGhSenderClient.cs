@@ -75,31 +75,33 @@ namespace SpeckleAbstract
                 mySender = new SpeckleSender(new SpeckleServer(@"http://10.211.55.2:8080", @"ws://10.211.55.2:8080", "09babdf5b04a40d58327e9dcdd582417"), new GhRhConveter(true, true));
             }
 
-            mySender.OnReady += (sender, e) =>
-            {
-                Debug.WriteLine("Sender ready:::" + (string)e.Data.streamId + ":::" + (string)e.Data.wsSessionId);
-                this.ready = true;
-                this.streamId = e.Data.streamId;
-                this.wsSessionId = e.Data.wsSessionId;
-            };
+            mySender.OnReady += OnReady;
 
-            mySender.OnDataSent += (sender, e) =>
-            {
-                Debug.WriteLine("Data was sent. Stop the loading bar :) Wait. What loading bar? The one luis wanted! Where is it? I dunno");
-            };
-
+            mySender.OnDataSent += OnDataSent;
 
             mySender.OnMessage += OnVolatileMessage;
+
             mySender.OnBroadcast += OnBroadcast;
 
             expireComponentAction = () => this.ExpireSolution(true);
 
-            // events on objects
             this.ObjectChanged += (sender, e) => updateMetadata();
 
-            // events on parameters
             foreach (var param in Params.Input)
                 param.ObjectChanged += (sender, e) => updateMetadata();
+        }
+
+        public virtual void OnReady(object source, SpeckleEventArgs e)
+        {
+            Debug.WriteLine("Sender ready:::" + (string)e.Data.streamId + ":::" + (string)e.Data.wsSessionId);
+            this.ready = true;
+            this.streamId = e.Data.streamId;
+            this.wsSessionId = e.Data.wsSessionId;
+        }
+
+        public virtual void OnDataSent(object source, SpeckleEventArgs e)
+        {
+            Debug.WriteLine("Data was sent. Stop the loading bar :) Wait. What loading bar? The one luis wanted! Where is it? I dunno");
         }
 
         public virtual void OnVolatileMessage(object source, SpeckleEventArgs e)

@@ -88,25 +88,15 @@ namespace SpeckleAbstract
             base.DocumentContextChanged(document, context);
         }
 
-        /// <summary>
-        /// Registers all the input parameters for this component.
-        /// </summary>
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
             pManager.AddTextParameter("streamId", "streamId", "Which speckle stream do you want to connect to?", GH_ParamAccess.item);
         }
 
-        /// <summary>
-        /// Registers all the output parameters for this component.
-        /// </summary>
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
         }
 
-        /// <summary>
-        /// This is the method that actually does the work.
-        /// </summary>
-        /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
             string inputId = null;
@@ -136,46 +126,58 @@ namespace SpeckleAbstract
         {
             if (myReceiver == null) return;
 
-            myReceiver.OnReady += (sender, e) =>
-            {
-                this.Name = this.NickName = (string)e.Data.name;
-                diffStructure(e.Data.layers);
-                layers = e.Data.layers;
-                objects = e.Data.objects;
+            myReceiver.OnReady += OnReady;
 
-                Debug.WriteLine("ready event");
-                Rhino.RhinoApp.MainApplicationWindow.Invoke(expireComponentAction);
-            };
+            myReceiver.OnMetadata += OnMetadata;
 
-            myReceiver.OnMetadata += (sender, e) =>
-            {
-                this.Name = this.NickName = (string)e.Data.name;
-                diffStructure(e.Data.layers);
-                layers = e.Data.layers;
+            myReceiver.OnData += OnData;
 
-                Debug.WriteLine("metadata event");
-                //Rhino.RhinoApp.MainApplicationWindow.Invoke(expireComponentAction);
-            };
-
-            myReceiver.OnData += (sender, e) =>
-            {
-                Debug.WriteLine("RECEIVER: Received live update event: " + e.EventInfo);
-                this.Name = this.NickName = (string)e.Data.name;
-                diffStructure(e.Data.layers);
-                layers = e.Data.layers;
-                objects = e.Data.objects;
-
-                Debug.WriteLine("data event");
-                Rhino.RhinoApp.MainApplicationWindow.Invoke(expireComponentAction);
-            };
-
-            myReceiver.OnHistory += (sender, e) =>
-            {
-                Debug.WriteLine("Received history update event: " + e.EventInfo);
-            };
+            myReceiver.OnHistory += OnHistory;
 
             myReceiver.OnMessage += OnVolatileMessage;
+
             myReceiver.OnBroadcast += OnBroadcast;
+        }
+
+        #region virtual event handlers
+
+        public virtual void OnReady(object source, SpeckleEventArgs e)
+        {
+            Debug.WriteLine("[Gh Receiver] Got a ready message. Extend this class and implement custom protocols at ease.");
+
+            this.Name = this.NickName = (string)e.Data.name;
+            diffStructure(e.Data.layers);
+            layers = e.Data.layers;
+            objects = e.Data.objects;
+
+            Debug.WriteLine("ready event");
+            Rhino.RhinoApp.MainApplicationWindow.Invoke(expireComponentAction);
+        }
+
+        public virtual void OnMetadata(object source, SpeckleEventArgs e)
+        {
+            this.Name = this.NickName = (string)e.Data.name;
+            diffStructure(e.Data.layers);
+            layers = e.Data.layers;
+
+            Debug.WriteLine("metadata event");
+        }
+
+        public virtual void OnData(object source, SpeckleEventArgs e)
+        {
+            Debug.WriteLine("RECEIVER: Received live update event: " + e.EventInfo);
+            this.Name = this.NickName = (string)e.Data.name;
+            diffStructure(e.Data.layers);
+            layers = e.Data.layers;
+            objects = e.Data.objects;
+
+            Debug.WriteLine("data event");
+            Rhino.RhinoApp.MainApplicationWindow.Invoke(expireComponentAction);
+        }
+
+        public virtual void OnHistory(object source, SpeckleEventArgs e)
+        {
+            Debug.WriteLine("Received history update event: " + e.EventInfo);
         }
 
         public virtual void OnVolatileMessage(object source, SpeckleEventArgs e)
@@ -187,6 +189,10 @@ namespace SpeckleAbstract
         {
             Debug.WriteLine("[Gh Receiver] Got a volatile broadcast. Extend this class and implement custom protocols at ease.");
         }
+
+        #endregion
+
+        #region workhorses
 
         public void diffStructure(List<SpeckleLayer> newLayers)
         {
@@ -252,6 +258,8 @@ namespace SpeckleAbstract
             }
         }
 
+        #endregion
+
         #region Variable Parm
 
         private Param_GenericObject getGhParameter(SpeckleLayer param)
@@ -280,7 +288,6 @@ namespace SpeckleAbstract
         {
             return null;
         }
-
         public void VariableParameterMaintenance()
         {
         }
