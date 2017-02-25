@@ -57,11 +57,26 @@ namespace SpeckleClient
 
             client.ExecuteAsync(request, response =>
             {
-                dynamic parsedResponse = JsonConvert.DeserializeObject<ExpandoObject>(response.Content);
+                if (response == null)
+                {
+                    callback(false, "Null response");
+                }
+
+                dynamic parsedResponse = null;
+
+                try
+                {
+                    parsedResponse = JsonConvert.DeserializeObject<ExpandoObject>(response.Content);
+                }
+                catch
+                {
+                    callback(false, "Could not parse response.");
+                }
+
                 if (response.StatusCode == System.Net.HttpStatusCode.OK)
                     callback(true, parsedResponse);
                 else
-                    callback(false, parsedResponse);
+                    callback(false, "Bad Status code.");
             });
 
         }
@@ -124,7 +139,7 @@ namespace SpeckleClient
         /// <param name="_objectCount">Number of objects this layer contains.</param>
         /// <param name="_startIndex">The index of the first object this layer contains from the global object list.</param>
         /// <param name="_properties">Extra properties, if you want to. Would be cool to have stuff like colours and materials in here.</param>
-        public SpeckleLayer(string _name, string _guid, string _topology, int _objectCount, int _startIndex,int _orderIndex, dynamic _properties = null)
+        public SpeckleLayer(string _name, string _guid, string _topology, int _objectCount, int _startIndex, int _orderIndex, dynamic _properties = null)
         {
             name = _name; guid = _guid; topology = _topology; objectCount = _objectCount; startIndex = _startIndex; orderIndex = _orderIndex;
             properties = _properties;
@@ -165,7 +180,7 @@ namespace SpeckleClient
         /// <returns></returns>
         public static SpeckleLayer fromExpando(dynamic o)
         {
-            return new SpeckleLayer((string) o.name, (string) o.guid, (string) o.topology, (int) o.objectCount, (int) o.startIndex, (int) o.orderIndex, (dynamic) o.properties);
+            return new SpeckleLayer((string)o.name, (string)o.guid, (string)o.topology, (int)o.objectCount, (int)o.startIndex, (int)o.orderIndex, (dynamic)o.properties);
         }
 
     }
@@ -390,7 +405,7 @@ namespace SpeckleClient
         public string encodedValue;
     }
 
-    [Serializable] 
+    [Serializable]
     public class SpeckleObjectProperties
     {
         public int objectIndex;

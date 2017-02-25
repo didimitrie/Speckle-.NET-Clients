@@ -72,7 +72,10 @@ namespace UserDataUtils
                     if (nmb != null)
                         props.Set(key, nmb.Value);
 
-                    if (value is double || value is int)
+                    if (value is double)
+                        props.Set(key, (double)value);
+
+                    if(value is int)
                         props.Set(key, (double)value);
 
                     GH_String str = value as GH_String;
@@ -81,6 +84,10 @@ namespace UserDataUtils
 
                     if (value is string)
                         props.Set(key, (string)value);
+
+                    GH_Boolean bol = value as GH_Boolean;
+                    if (bol != null)
+                        props.Set(key, bol.Value);
 
                     GH_ObjectWrapper temp = value as GH_ObjectWrapper;
                     if (temp != null)
@@ -91,7 +98,7 @@ namespace UserDataUtils
                     }
 
                     if (!props.ContainsKey(key))
-                        this.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, key + " could not be set. Strings, numbers and ArchivableDictionary are the supported types.");
+                        this.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, key + " could not be set. Strings, numbers, booleans and ArchivableDictionary are the only supported types.");
                 }
             }
 

@@ -112,7 +112,7 @@ namespace UserDataUtils
             // 2) @David: i hate grasshopper typecasting and the hassle below
             // (why isn't there a GH_DefaultType, where i can access the .Value regardless of type...?)
 
-            CommonObject myObj = null;
+            GeometryBase myObj = null;
 
             GH_Mesh mesh = obj as GH_Mesh;
             if (mesh != null)
@@ -146,6 +146,14 @@ namespace UserDataUtils
             if (circle != null)
                 myObj = circle.Value.ToNurbsCurve();
 
+            GH_Arc arc = obj as GH_Arc;
+            if (arc != null)
+                myObj = arc.Value.ToNurbsCurve();
+
+            GH_Point pt = obj as GH_Point;
+            if (pt != null)
+                myObj = new Point(pt.Value);
+
             if (myObj == null)
             {
                 // get the object out
@@ -168,9 +176,11 @@ namespace UserDataUtils
                     if (nmb!=null)
                         myObj.UserDictionary.Set(key, nmb.Value);
 
-                    if (value is double || value is int)
-                        myObj.UserDictionary.Set(key, (double) value);
+                    if (value is double)
+                        myObj.UserDictionary.Set(key, (double)value);
 
+                    if (value is int)
+                        myObj.UserDictionary.Set(key, (double)value);
 
                     GH_String str = value as GH_String;
                     if(str!=null)
@@ -178,6 +188,10 @@ namespace UserDataUtils
 
                     if (value is string)
                         myObj.UserDictionary.Set(key, (string)value);
+
+                    GH_Boolean bol = value as GH_Boolean;
+                    if (bol != null)
+                        myObj.UserDictionary.Set(key, bol.Value);
 
                     GH_ObjectWrapper temp = value as GH_ObjectWrapper;
                     if (temp != null)

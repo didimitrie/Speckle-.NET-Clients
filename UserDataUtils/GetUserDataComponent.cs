@@ -66,6 +66,10 @@ namespace UserDataUtils
             if (crv != null)
                 myObj = crv.Value;
 
+            Point pt = o as Rhino.Geometry.Point;
+            if (pt != null)
+                myObj = pt;
+
             if (myObj == null)
             {
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Failed to get object");

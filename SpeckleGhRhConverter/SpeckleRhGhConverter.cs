@@ -1,4 +1,5 @@
 ﻿using Grasshopper.Kernel.Types;
+using Rhino.Collections;
 using Rhino.Geometry;
 using Rhino.Runtime;
 using SpeckleClient;
@@ -155,30 +156,91 @@ namespace SpeckleGhRhConverter
             // polyline special cases yay
             if (type == "Polyline")
                 myObj = ((Polyline)encodedObject).ToNurbsCurve();
-            else 
+            else
                 myObj = encodedObject as CommonObject;
 
             // if still null get outta here
             if (myObj == null) return encodedObject;
-           
+
             myObj.UserDictionary.Clear();
 
-            foreach (var kvp in objectProperties.properties)
-            {
-                Nullable<double> xx = null;
-                try
-                {
-                    xx = kvp.Value;
-                }
-                catch { }
+            //var dict = new Dictionary<string, object>(objectProperties); // object properties is a fucking list
+            //myObj.UserDictionary.ReplaceContentsWith(getDictionaryFromProps(objectProperties as List<ExpandoObject>));
 
-                if (xx != null)
-                    myObj.UserDictionary.Set((string)kvp.Key, (double)kvp.Value);
-                else if (kvp.Value is string)
-                    myObj.UserDictionary.Set((string)kvp.Key, (string)kvp.Value);
+            foreach (var prop in objectProperties.properties)
+            {
+                if (prop.Value is ExpandoObject)
+                {
+                    //myObj.UserDictionary.Set((string)prop.Key, getArchivableDict(new Dictionary<string, object>((ExpandoObject) prop.Value)));
+                    myObj.UserDictionary.Set((string)prop.Key, getArchivableDict((ExpandoObject)prop.Value));
+                }
+                else
+                {
+                    
+                    try {
+                        myObj.UserDictionary.Set((string)prop.Key, (double)prop.Value);
+                    } catch { }
+
+                    try
+                    {
+                        myObj.UserDictionary.Set((string)prop.Key, (int)prop.Value);
+                    }
+                    catch { }
+
+                    try
+                    {
+                        myObj.UserDictionary.Set((string)prop.Key, (bool)prop.Value);
+                    }
+                    catch { }
+
+                    try
+                    {
+                        myObj.UserDictionary.Set((string)prop.Key, (string)prop.Value);
+                    }
+                    catch { }
+                }
             }
 
             return myObj;
+        }
+               
+        private static ArchivableDictionary getArchivableDict(ExpandoObject dict)
+        {
+            var myDictionary = new ArchivableDictionary();
+            foreach (var kvp in dict)
+            {
+                if (kvp.Value is ExpandoObject) myDictionary.Set(kvp.Key, getArchivableDict(kvp.Value as ExpandoObject));
+                else
+                {
+                    try
+                    {
+                        myDictionary.Set((string)kvp.Key, (double)kvp.Value);
+                    }
+                    catch { }
+
+                    try
+                    {
+                        // FML
+                        myDictionary.Set((string)kvp.Key, Convert.ToInt32(kvp.Value));
+                    }
+                    catch
+                    {
+                    }
+
+                    try
+                    {
+                        myDictionary.Set((string)kvp.Key, (bool)kvp.Value);
+                    }
+                    catch { }
+
+                    try
+                    {
+                        myDictionary.Set((string)kvp.Key, (string)kvp.Value);
+                    }
+                    catch { }
+                }
+            }
+            return myDictionary;
         }
 
         /// <summary>
@@ -226,6 +288,10 @@ namespace SpeckleGhRhConverter
                 return GhRhConveter.fromPoint(point.Value);
             if (o is Point3d)
                 return GhRhConveter.fromPoint((Point3d)o);
+            // added because when we assign user data to points they get converted to points.
+            // the above comment does makes sense. check the sdk.
+            if (o is Rhino.Geometry.Point)
+                return GhRhConveter.fromPoint(((Rhino.Geometry.Point)o).Location);
 
             GH_Vector vector = o as GH_Vector;
             if (vector != null)
