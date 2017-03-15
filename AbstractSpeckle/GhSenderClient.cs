@@ -19,7 +19,7 @@ using System.Windows.Forms;
 
 namespace SpeckleAbstract
 {
-    public class SpeckleGhSenderClient : GH_Component, IGH_VariableParameterComponent
+    public class GhSenderClient : GH_Component, IGH_VariableParameterComponent
     {
         string streamId, wsSessionId;
         string serialisedSender;
@@ -29,7 +29,7 @@ namespace SpeckleAbstract
 
         SpeckleSender mySender;
 
-        public SpeckleGhSenderClient()
+        public GhSenderClient()
           : base("Speckle Sender", "Speckle Sender",
               "Speckle Sender",
               "Speckle", "Speckle")
@@ -59,21 +59,24 @@ namespace SpeckleAbstract
             ready = false;
 
             if (serialisedSender != null)
-            {
-                // means we're an old sender, deserialising right now
                 mySender = new SpeckleClient.SpeckleSender(serialisedSender, new GhRhConveter(true, true));
-            }
             else
             {
-                // means we're new! TODO: ask for server details.
-                // below assuming some stuff.
+                ServerDetailsDialog myForm = new ServerDetailsDialog();
 
-                //remote testing:
-                //mySender = new SpeckleSender(new SpeckleServer(@"https://5th.one", @"wss://5th.one", "asdf"), new GhConveter()); 
-
-                // local testing:
-                mySender = new SpeckleSender(new SpeckleServer(@"http://10.211.55.2:8080", @"ws://10.211.55.2:8080", "09babdf5b04a40d58327e9dcdd582417"), new GhRhConveter(true, true));
+                var result = myForm.ShowDialog();
+                if(result == DialogResult.OK)
+                {
+                    mySender = new SpeckleSender(myForm.url, myForm.token, new GhRhConveter(true, true));
+                } else
+                {
+                    MessageBox.Show("Failed to create server.");
+                    this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Failed to initialise sender.");
+                    return;
+                }
             }
+
+            mySender.OnError += OnError;
 
             mySender.OnReady += OnReady;
 
@@ -91,6 +94,11 @@ namespace SpeckleAbstract
                 param.ObjectChanged += (sender, e) => updateMetadata();
         }
 
+        public virtual void OnError(object source, SpeckleEventArgs e)
+        {
+            this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.EventInfo);
+        }
+
         public virtual void OnReady(object source, SpeckleEventArgs e)
         {
             Debug.WriteLine("Sender ready:::" + (string)e.Data.streamId + ":::" + (string)e.Data.wsSessionId);
@@ -102,6 +110,8 @@ namespace SpeckleAbstract
         public virtual void OnDataSent(object source, SpeckleEventArgs e)
         {
             Debug.WriteLine("Data was sent. Stop the loading bar :) Wait. What loading bar? The one luis wanted! Where is it? I dunno");
+
+            this.Message = "Data sent.";
         }
 
         public virtual void OnVolatileMessage(object source, SpeckleEventArgs e)
@@ -116,14 +126,14 @@ namespace SpeckleAbstract
 
         public override void RemovedFromDocument(GH_Document document)
         {
-            mySender.Dispose();
+            if(mySender!=null) mySender.Dispose();
             base.RemovedFromDocument(document);
         }
 
         public override void DocumentContextChanged(GH_Document document, GH_DocumentContext context)
         {
             if (context == GH_DocumentContext.Close)
-                mySender.Dispose();
+                if (mySender != null) mySender.Dispose();
 
             base.DocumentContextChanged(document, context);
         }
@@ -131,10 +141,10 @@ namespace SpeckleAbstract
         public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
         {
             base.AppendAdditionalMenuItems(menu);
-            GH_DocumentObject.Menu_AppendItem(menu, @"Save current state", (sender, e) =>
-            {
-                mySender.saveToHistory();
-            });
+            //GH_DocumentObject.Menu_AppendItem(menu, @"Save current state", (sender, e) =>
+            //{
+            //    mySender.saveToHistory();
+            //});
         }
 
 
@@ -151,7 +161,7 @@ namespace SpeckleAbstract
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddTextParameter("URL", "URL", "Link to the latest uploaded file.", GH_ParamAccess.item);
-            pManager.AddTextParameter("ID", "ID", "Link to the latest uploaded file.", GH_ParamAccess.item);
+            pManager.AddTextParameter("ID", "ID", "Stream Id", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -161,12 +171,14 @@ namespace SpeckleAbstract
         /// to store data in output parameters.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+            DA.SetData(0, mySender.getServer() + @"/streams/" + mySender.getStreamId());
+            DA.SetData(1, mySender.getStreamId());
+
             if (!ready) return;
 
             updateData();
 
-            DA.SetData(0, mySender.getServer() + @"/stream?streamId=" + mySender.getStreamId());
-            DA.SetData(1, mySender.getStreamId());
+            this.Message = "Sending Data...";
         }
 
 

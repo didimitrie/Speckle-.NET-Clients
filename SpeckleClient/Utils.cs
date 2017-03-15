@@ -1,106 +1,14 @@
-﻿using Newtonsoft.Json;
-using RestSharp;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Dynamic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace SpeckleClient
 {
-    /// <summary>
-    /// Helper class for speckle functionality.
-    /// </summary>
-    [Serializable]
-    public class SpeckleServer
-    {
-        public string wsEndpoint, restEndpoint, wsSessionId, token, streamId;
-
-        /// <summary>
-        /// Creates a new speckle server. Used mostly as a data store and method coagulator.
-        /// </summary>
-        /// <param name="_restEndpoint">REST API endpoint.</param>
-        /// <param name="_wsEndpoint">Websockets endpoint.</param>
-        /// <param name="_token">User token to authenticate to the server.</param>
-        /// <param name="_streamId">The stream you want to connect to. Omit to create a new one.</param>
-        public SpeckleServer(string _restEndpoint, string _wsEndpoint, string _token, string _streamId = null)
-        {
-            wsEndpoint = _wsEndpoint;
-            restEndpoint = _restEndpoint;
-            token = _token;
-            streamId = _streamId;
-        }
-
-        /// <summary>
-        /// Makes an API call. Sets the necessary custom headers (speckle-token, speckle-stream-id, speckle-ws-id).
-        /// </summary>
-        /// <param name="endpoint">Usually @"/api/ACTION"</param>
-        /// <param name="method">POST or GET</param>
-        /// <param name="payload">The compressed payload. Use the "compressPayload" to compress it.</param>
-        /// <param name="callback">Takes two arguments: response success (bool) and server response.</param>
-        public void apiCall(string endpoint, Method method, byte[] payload, Action<bool, dynamic> callback)
-        {
-            var client = new RestClient(restEndpoint + endpoint);
-            var request = new RestRequest(method);
-
-            request.AddHeader("speckle-token", token); // api access token
-            request.AddHeader("speckle-stream-id", streamId); // stream id the component uses
-            request.AddHeader("speckle-ws-id", wsSessionId); // socket session id
-
-            request.AddHeader("Content-Encoding", "gzip");
-            request.AddHeader("content-type", "application/json; charset=utf-8");
-            request.AddParameter("application/json", payload, ParameterType.RequestBody);
-
-            client.ExecuteAsync(request, response =>
-            {
-                if (response == null)
-                {
-                    callback(false, "Null response");
-                }
-
-                dynamic parsedResponse = null;
-
-                try
-                {
-                    parsedResponse = JsonConvert.DeserializeObject<ExpandoObject>(response.Content);
-                }
-                catch
-                {
-                    callback(false, "Could not parse response.");
-                }
-
-                if (response.StatusCode == System.Net.HttpStatusCode.OK)
-                    callback(true, parsedResponse);
-                else
-                    callback(false, "Bad Status code.");
-            });
-
-        }
-
-        /// <summary>
-        /// Compresses a dynamic object using GZip. Use it to generate payloads for the apiCall() method.
-        /// </summary>
-        /// <param name="payload">Object to compress.</param>
-        /// <returns>The compressed byte array.</returns>
-        public byte[] compressPayload(dynamic payload)
-        {
-            var dataStream = new MemoryStream();
-            using (var zipStream = new GZipStream(dataStream, CompressionMode.Compress))
-            {
-                using (var writer = new StreamWriter(zipStream))
-                {
-                    writer.Write(JsonConvert.SerializeObject(payload));
-                }
-            }
-
-            return dataStream.ToArray();
-        }
-    }
-
     /// <summary>
     /// Defines a speckle layer.
     /// </summary>
@@ -245,6 +153,9 @@ namespace SpeckleClient
             encodeObjectsToSpeckle = _encodeObjectsToSpeckle;
             encodeObjectsToNative = _encodeObjectsToNative;
         }
+
+        abstract public void commitCache();
+
 
         #region global convert functions
 

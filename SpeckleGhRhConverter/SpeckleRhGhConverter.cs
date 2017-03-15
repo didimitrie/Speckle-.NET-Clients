@@ -24,9 +24,17 @@ namespace SpeckleGhRhConverter
         /// <para>I should consider moving this cache to the client.</para>
         /// </summary>
         HashSet<string> sent = new HashSet<string>();
+        HashSet<string> temporaryCahce = new HashSet<string>();
 
         public GhRhConveter(bool _encodeObjectsToSpeckle, bool _encodeObjectsToNative) : base(_encodeObjectsToSpeckle, _encodeObjectsToNative)
         {
+        }
+
+        public override void commitCache()
+        {
+            foreach (var s in temporaryCahce)
+                sent.Add(s);
+            temporaryCahce = new HashSet<string>();
         }
 
         // sync method
@@ -38,19 +46,23 @@ namespace SpeckleGhRhConverter
                 var myObj = fromGhRhObject(o, encodeObjectsToNative, encodeObjectsToSpeckle);
 
                 if (nonHashedTypes.Contains((string)myObj.type))
+                {
                     convertedObjects.Add(myObj);
+                }
                 else
                 {
-                    // this is some agressive caching
-                    var added = sent.Add((string)myObj.hash);
-                    // means hash was not in sent hashes, so add the full objects
-                    if (added)
+                    var isInCache = sent.Contains((string)myObj.hash);
+
+                    if (!isInCache)
+                    {
                         convertedObjects.Add(myObj);
-                    // means hash was already in the sent hashes, so just add min placeholder
+                        temporaryCahce.Add(myObj.hash);
+                    }
                     else
                     {
                         var temp = new SpeckleObject();
-                        temp.hash = myObj.hash; temp.type = myObj.type;
+                        temp.hash = myObj.hash;
+                        temp.type = myObj.type;
                         convertedObjects.Add(temp);
                     }
                 }
@@ -212,20 +224,22 @@ namespace SpeckleGhRhConverter
                 if (kvp.Value is ExpandoObject) myDictionary.Set(kvp.Key, getArchivableDict(kvp.Value as ExpandoObject));
                 else
                 {
+
+                    try
+                    {
+                        myDictionary.Set((string)kvp.Key, Convert.ToInt32(kvp.Value));
+                    }
+                    catch
+                    {
+                    }
+
                     try
                     {
                         myDictionary.Set((string)kvp.Key, (double)kvp.Value);
                     }
                     catch { }
 
-                    try
-                    {
-                        // FML
-                        myDictionary.Set((string)kvp.Key, Convert.ToInt32(kvp.Value));
-                    }
-                    catch
-                    {
-                    }
+                    
 
                     try
                     {
