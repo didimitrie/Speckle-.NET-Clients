@@ -24,9 +24,17 @@ namespace SpeckleGhRhConverter
         /// <para>I should consider moving this cache to the client.</para>
         /// </summary>
         HashSet<string> sent = new HashSet<string>();
+        HashSet<string> temporaryCahce = new HashSet<string>();
 
         public GhRhConveter(bool _encodeObjectsToSpeckle, bool _encodeObjectsToNative) : base(_encodeObjectsToSpeckle, _encodeObjectsToNative)
         {
+        }
+
+        public override void commitCache()
+        {
+            foreach (var s in temporaryCahce)
+                sent.Add(s);
+            temporaryCahce = new HashSet<string>();
         }
 
         // sync method
@@ -43,23 +51,20 @@ namespace SpeckleGhRhConverter
                 }
                 else
                 {
-                    convertedObjects.Add(myObj);
-                    
-                    // this is some agressive caching
-                    // disabling for now, as it proves to be unreliable re serverside. 
-                    // sorry.
+                    var isInCache = sent.Contains((string)myObj.hash);
 
-                    //var added = sent.Add((string)myObj.hash);
-                    //if (added)
-                    //{ 
-                    //    convertedObjects.Add(myObj);
-                    //}
-                    //else
-                    //{
-                    //    var temp = new SpeckleObject();
-                    //    temp.hash = myObj.hash; temp.type = myObj.type;
-                    //    convertedObjects.Add(temp);
-                    //}
+                    if (!isInCache)
+                    {
+                        convertedObjects.Add(myObj);
+                        temporaryCahce.Add(myObj.hash);
+                    }
+                    else
+                    {
+                        var temp = new SpeckleObject();
+                        temp.hash = myObj.hash;
+                        temp.type = myObj.type;
+                        convertedObjects.Add(temp);
+                    }
                 }
             }
 

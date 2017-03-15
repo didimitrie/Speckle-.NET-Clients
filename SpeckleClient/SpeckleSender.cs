@@ -169,6 +169,8 @@ namespace SpeckleClient
                         OnError?.Invoke(this, new SpeckleEventArgs("Failed to update stream."));
                         return;
                     }
+
+                    converter.commitCache();
                     OnDataSent?.Invoke(this, new SpeckleEventArgs("Stream was updated."));
                 });
                 DataSender.Stop();

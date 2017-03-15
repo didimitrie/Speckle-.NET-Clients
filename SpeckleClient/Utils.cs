@@ -154,6 +154,9 @@ namespace SpeckleClient
             encodeObjectsToNative = _encodeObjectsToNative;
         }
 
+        abstract public void commitCache();
+
+
         #region global convert functions
 
         /// <summary>
