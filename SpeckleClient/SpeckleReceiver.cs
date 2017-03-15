@@ -45,32 +45,52 @@ namespace SpeckleClient
         public event SpeckleEvents OnMessage;
         public event SpeckleEvents OnBroadcast; // do we need the separation? maybe yeah
 
+        public event SpeckleEvents OnDataMessage;
+
         public event SpeckleEvents OnData;
         public event SpeckleEvents OnMetadata;
         public event SpeckleEvents OnHistory;
+        public event SpeckleEvents OnError;
 
         #region constructors
 
-        public SpeckleReceiver(SpeckleServer _server, SpeckleConverter _converter, string documentId = null, string documentName = null)
+        public SpeckleReceiver(string apiUrl, string token, string streamId, SpeckleConverter _converter, string documentId = null, string documentName = null)
         {
-            if (_server.streamId == null)
-                throw new Exception("Receivers need a stream to listen to!");
-            server = _server;
             converter = _converter;
 
-            setup();
+            server = new SpeckleServer(apiUrl, token, streamId);
+            server.OnError += (sender, e) =>
+            {
+                this.OnError?.Invoke(this, new SpeckleEventArgs(e.EventInfo));
+            };
+
+            server.OnReady += (sender, e) =>
+            {
+                this.setup();
+            };
         }
 
         public SpeckleReceiver(string serialisedObject, SpeckleConverter _converter)
         {
+            // TO MASSIVE DO
+            // LOL
+
             dynamic description = JsonConvert.DeserializeObject(serialisedObject);
-            server = new SpeckleServer((string)description.restEndpoint, (string)description.wsEndpoint, (string)description.token, (string)description.streamId);
+            server = new SpeckleServer((string)description.restEndpoint, (string)description.token, (string)description.streamId);
 
             converter = _converter;
             converter.encodeObjectsToNative = description.encodeNative;
             converter.encodeObjectsToSpeckle = description.encodeSpeckle;
 
-            setup();
+            server.OnError += (sender, e) =>
+            {
+                this.OnError?.Invoke(this, new SpeckleEventArgs(e.EventInfo));
+            };
+
+            server.OnReady += (sender, e) =>
+            {
+                this.setup();
+            };
         }
 
         #endregion
@@ -82,20 +102,16 @@ namespace SpeckleClient
             cache = new Dictionary<string, object>();
             cacheKeys = new List<string>();
 
-            server.apiCall(@"/api/handshake", Method.POST, null, (success, response) =>
+            server.getStream((success, response) =>
             {
-                server.apiCall(@"/api/stream", Method.GET, null, (success_gotStream, response_gotStream) =>
+                if (!success)
                 {
-                    if (!success_gotStream)
-                        throw new Exception("Failed to retrieve stream.");
-                    else
-                    {
-                        streamLiveInstance = response_gotStream;
-                        streamFound = true;
-                    }
-
-                    setupWebsocket();
-                });
+                    OnError?.Invoke(this, new SpeckleEventArgs("Failed to retrieve stream."));
+                    return;
+                }
+                streamFound = true;
+                streamLiveInstance = response; // this will fail!!!
+                setupWebsocket();
             });
 
             // ready is defined as: streamId exists && wsSessionId && streamWas found.
@@ -173,6 +189,7 @@ namespace SpeckleClient
 
                 if (message.eventName == "live-update")
                 {
+                    OnDataMessage?.Invoke(this, new SpeckleEventArgs("Received update notification."));
                     getObjects(message.args as ExpandoObject, (castObjects) =>
                     {
                         dynamic eventData = new ExpandoObject();
@@ -230,13 +247,13 @@ namespace SpeckleClient
             {
                 // check if we have a user prop
                 dynamic prop = null;
-                foreach(var myprop in liveUpdate.objectProperties)
+                foreach (var myprop in liveUpdate.objectProperties)
                 {
                     if (myprop.objectIndex == k)
                         prop = myprop;
                 }
 
-                // TODO: Async doesn't guarantee object order anymore.
+                // TODO: Async doesn't guarantee object order.
                 // need to switch toa insertAt(k, obj) list, and pass that through politely to the guy below;
                 getObject(obj as ExpandoObject, prop as ExpandoObject, k, (encodedObject, index) =>
                 {
@@ -249,7 +266,7 @@ namespace SpeckleClient
             }
         }
 
-        public void getObject(dynamic obj, dynamic objectProperties, int index, Action<object,int> callback)
+        public void getObject(dynamic obj, dynamic objectProperties, int index, Action<object, int> callback)
         {
             if (converter.nonHashedTypes.Contains((string)obj.type))
             {
@@ -263,44 +280,47 @@ namespace SpeckleClient
                 return;
             }
 
-            var endpoint = @"/api/object?hash=" + (string)obj.hash;
-
-            // if it's a brep or a curve, since we're decoding in .net, don't get
-            // the speckle value (ie, a brep will just get his base64)
-            // tricky: what if i will have a dynamo client requesting a
-            // rhino object? 
+            var type = "";
             if (converter.encodedTypes.Contains((string)obj.type))
-                endpoint += "&excludeValue=true";
+                type = "native";
 
-            server.apiCall(endpoint, Method.GET, null, (success, response) =>
+            server.getGeometry((string)obj.hash, type, (success, response) =>
             {
-                if (response.success)
+                if(!success)
                 {
-                    var castObject = converter.encodeObject(response.obj, objectProperties);
-                    var cacheAdded = false;
-                    try
-                    {
-                        cache.Add((string)obj.hash, castObject);
-                        cacheAdded = true;
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.WriteLine("Cache already contained said object." + e.ToString());
-                    };
-
-                    if (cacheAdded) cacheKeys.Add((string)obj.hash);
-
-                    if (cache.Count >= maxCacheEl)
-                    {
-                        cache.Remove(cacheKeys.First());
-                        cacheKeys.RemoveAt(0);
-                    }
-
-                    callback(castObject, index);
+                    callback("Failed to retrieve object: " + (string) obj.hash, index);
+                    return;
                 }
-                else
-                    callback("Failed to retrieve object from server: " + response.objectHash, index);
+
+                var castObject = converter.encodeObject(response.data, objectProperties);
+                addToCache((string)obj.hash, castObject);
+
+                callback(castObject, index);
             });
+        }
+
+        private void addToCache(string hash, object obj)
+        {
+            var cacheAdded = false;
+            try
+            {
+                cache.Add(hash, obj);
+                cacheAdded = true;
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine("Cache already contained said object." + e.ToString());
+            };
+
+            if (cacheAdded)
+                cacheKeys.Add((string)hash);
+
+            if (cache.Count >= maxCacheEl)
+            {
+                cache.Remove(cacheKeys.First());
+                cacheKeys.RemoveAt(0);
+            }
+
         }
 
         public string getStreamId()
@@ -311,6 +331,11 @@ namespace SpeckleClient
         public string getServer()
         {
             return server.restEndpoint;
+        }
+
+        public string getToken()
+        {
+            return server.token;
         }
 
         #endregion

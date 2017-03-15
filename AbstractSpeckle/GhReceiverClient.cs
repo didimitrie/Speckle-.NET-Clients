@@ -17,8 +17,10 @@ using Grasshopper.Kernel.Data;
 
 namespace SpeckleAbstract
 {
-    public class SpeckleGhReceiverClient : GH_Component, IGH_VariableParameterComponent
+    public class GhReceiverClient : GH_Component, IGH_VariableParameterComponent
     {
+        string apiUrl;
+        string token;
         string streamId;
         string serialisedReceiver;
         List<string> senderGuids;
@@ -32,7 +34,7 @@ namespace SpeckleAbstract
         /// <summary>
         /// Initializes a new instance of the MyComponent1 class.
         /// </summary>
-        public SpeckleGhReceiverClient()
+        public GhReceiverClient()
           : base("Speckle Receiver", "Speckle Receiver",
               "Speckle Receier",
               "Speckle", "Speckle")
@@ -62,11 +64,19 @@ namespace SpeckleAbstract
             {
                 myReceiver = new SpeckleReceiver(serialisedReceiver, new GhRhConveter(true, true));
                 streamId = myReceiver.getStreamId();
+                apiUrl = myReceiver.getServer();
+                token = myReceiver.getToken();
+
                 registermyReceiverEvents();
-            }
-            else
+            } else
             {
-                // do nothing, init 
+                ServerDetailsDialog myForm = new ServerDetailsDialog();
+                var result = myForm.ShowDialog();
+                if( result == System.Windows.Forms.DialogResult.OK)
+                {
+                    apiUrl = myForm.url;
+                    token = myForm.token;
+                }
             }
 
             expireComponentAction = () => this.ExpireSolution(true);
@@ -113,7 +123,9 @@ namespace SpeckleAbstract
                 Debug.WriteLine("changing streamid");
                 streamId = inputId;
                 if (myReceiver != null) myReceiver.Dispose();
-                myReceiver = new SpeckleReceiver(new SpeckleServer(@"http://10.211.55.2:8080", @"ws://10.211.55.2:8080", "09babdf5b04a40d58327e9dcdd582417", streamId), new GhRhConveter(true, true));
+
+                myReceiver = new SpeckleReceiver(apiUrl, token, streamId, new GhRhConveter(true, true));
+
                 registermyReceiverEvents();
                 Message = "";
                 return;
@@ -125,6 +137,10 @@ namespace SpeckleAbstract
         void registermyReceiverEvents()
         {
             if (myReceiver == null) return;
+
+            myReceiver.OnDataMessage +=OnDataMessage;
+
+            myReceiver.OnError += OnError;
 
             myReceiver.OnReady += OnReady;
 
@@ -139,7 +155,17 @@ namespace SpeckleAbstract
             myReceiver.OnBroadcast += OnBroadcast;
         }
 
+        private void OnDataMessage(object source, SpeckleEventArgs e)
+        {
+            this.Message = "Update in progress.";
+        }
+
         #region virtual event handlers
+
+        public virtual void OnError(object source, SpeckleEventArgs e)
+        {
+            this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.EventInfo);
+        }
 
         public virtual void OnReady(object source, SpeckleEventArgs e)
         {
@@ -172,6 +198,7 @@ namespace SpeckleAbstract
             objects = e.Data.objects;
 
             Debug.WriteLine("data event");
+            this.Message = "Loaded update.";
             Rhino.RhinoApp.MainApplicationWindow.Invoke(expireComponentAction);
         }
 

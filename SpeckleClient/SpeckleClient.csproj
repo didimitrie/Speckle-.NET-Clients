@@ -56,6 +56,7 @@
     <Compile Include="SpeckleReceiver.cs" />
     <Compile Include="SpeckleSender.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SpeckleServer.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>

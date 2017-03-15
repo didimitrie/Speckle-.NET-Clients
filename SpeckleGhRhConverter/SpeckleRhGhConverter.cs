@@ -38,21 +38,28 @@ namespace SpeckleGhRhConverter
                 var myObj = fromGhRhObject(o, encodeObjectsToNative, encodeObjectsToSpeckle);
 
                 if (nonHashedTypes.Contains((string)myObj.type))
+                {
                     convertedObjects.Add(myObj);
+                }
                 else
                 {
+                    convertedObjects.Add(myObj);
+                    
                     // this is some agressive caching
-                    var added = sent.Add((string)myObj.hash);
-                    // means hash was not in sent hashes, so add the full objects
-                    if (added)
-                        convertedObjects.Add(myObj);
-                    // means hash was already in the sent hashes, so just add min placeholder
-                    else
-                    {
-                        var temp = new SpeckleObject();
-                        temp.hash = myObj.hash; temp.type = myObj.type;
-                        convertedObjects.Add(temp);
-                    }
+                    // disabling for now, as it proves to be unreliable re serverside. 
+                    // sorry.
+
+                    //var added = sent.Add((string)myObj.hash);
+                    //if (added)
+                    //{ 
+                    //    convertedObjects.Add(myObj);
+                    //}
+                    //else
+                    //{
+                    //    var temp = new SpeckleObject();
+                    //    temp.hash = myObj.hash; temp.type = myObj.type;
+                    //    convertedObjects.Add(temp);
+                    //}
                 }
             }
 
@@ -212,20 +219,22 @@ namespace SpeckleGhRhConverter
                 if (kvp.Value is ExpandoObject) myDictionary.Set(kvp.Key, getArchivableDict(kvp.Value as ExpandoObject));
                 else
                 {
+
+                    try
+                    {
+                        myDictionary.Set((string)kvp.Key, Convert.ToInt32(kvp.Value));
+                    }
+                    catch
+                    {
+                    }
+
                     try
                     {
                         myDictionary.Set((string)kvp.Key, (double)kvp.Value);
                     }
                     catch { }
 
-                    try
-                    {
-                        // FML
-                        myDictionary.Set((string)kvp.Key, Convert.ToInt32(kvp.Value));
-                    }
-                    catch
-                    {
-                    }
+                    
 
                     try
                     {

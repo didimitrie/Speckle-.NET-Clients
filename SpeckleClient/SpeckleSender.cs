@@ -48,6 +48,8 @@ namespace SpeckleClient
         /// Event emitted when an api call returns.
         /// </summary>
         public event SpeckleEvents OnDataSent;
+        public event SpeckleEvents OnError;
+
 
         #region constructors
 
@@ -55,12 +57,21 @@ namespace SpeckleClient
         /// Creates a new sender.
         /// </summary>
         /// <param name="_server">Speckle Server to connect to.</param>
-        public SpeckleSender(SpeckleServer _server, SpeckleConverter _converter, string documentId = null, string documentName = null)
+        public SpeckleSender(string apiUrl, string token, SpeckleConverter _converter, string documentId = null, string documentName = null)
         {
-            server = _server;
             converter = _converter;
-            this.setup();
 
+            server = new SpeckleServer(apiUrl, token);
+
+            this.server.OnError += (sender, e) =>
+            {
+                this.OnError?.Invoke(this, new SpeckleEventArgs(e.EventInfo));
+            };
+
+            server.OnReady += (e, data) =>
+            {
+                this.setup();
+            };
         }
 
         /// <summary>
@@ -70,11 +81,24 @@ namespace SpeckleClient
         public SpeckleSender(string serialisedObject, SpeckleConverter _converter)
         {
             dynamic description = JsonConvert.DeserializeObject(serialisedObject);
-            this.server = new SpeckleServer((string)description.restEndpoint, (string)description.wsEndpoint, (string)description.token, (string)description.streamId);
-            this.converter = _converter;
-            this.converter.encodeObjectsToNative = description.encodeNative;
-            this.converter.encodeObjectsToSpeckle = description.encodeSpeckle;
-            this.setup();
+
+            server = new SpeckleServer((string)description.restEndpoint, (string)description.token, (string)description.streamId);
+
+
+            this.server.OnError += (sender, e) =>
+            {
+                this.OnError?.Invoke(this, new SpeckleEventArgs(e.EventInfo));
+            };
+
+            this.server.OnReady += (sender, e) =>
+            {
+                this.setup();
+            };
+
+            converter = _converter;
+            converter.encodeObjectsToNative = description.encodeNative;
+            converter.encodeObjectsToSpeckle = description.encodeSpeckle;
+
         }
 
         #endregion
@@ -83,28 +107,27 @@ namespace SpeckleClient
 
         private void setup()
         {
-            server.apiCall(@"/api/handshake", Method.POST, null, (success, response) =>
-            {
-                if (!response.success) throw new Exception("Handshake failed.");
-
-                if (server.streamId == null) // => create a new stream
-                    server.apiCall(@"/api/stream", Method.POST, null, (success_stream, response_stream) =>
+            if (server.streamId == null)
+                server.createNewStream((success, data) =>
+                {
+                    if (!success)
                     {
-                        if (!response_stream.success)
-                        {
-                            throw new Exception("Failed to create a new stream.");
-                        }
-
-                        server.streamId = response_stream.streamId;
-                        this.setupWebsocket();
-                    });
-                else // => check if stream exists
-                    server.apiCall(@"/api/stream/exists", Method.GET, null, (success_existance, response_existance) =>
+                        OnError?.Invoke(this, new SpeckleEventArgs("Failed to create stream."));
+                        return;
+                    }
+                    server.streamId = data.streamId;
+                    setupWebsocket();
+                });
+            else
+                server.getStream((success, data) =>
+                {
+                    if (!success)
                     {
-                        if ((bool)response_existance.found == false) throw new Exception("Failed to find stream. " + server.streamId);
-                        this.setupWebsocket();
-                    });
-            });
+                        OnError?.Invoke(this, new SpeckleEventArgs("Failed to retrieve stream."));
+                        return;
+                    }
+                    setupWebsocket();
+                });
 
             // start the is ready checker timer.
             // "ready" is defined as:
@@ -133,21 +156,21 @@ namespace SpeckleClient
             {
                 Debug.WriteLine("SPKSENDER: Sending data payload.");
 
-                byte[] payload = server.compressPayload(
-                    new
-                    {
-                        objects = converter.convert(this.objects),
-                        objectProperties = converter.getObjectProperties(this.objects),
-                        layers = layers,
-                        streamName = name
-                    }
-                 );
+                dynamic x = new ExpandoObject();
+                x.objects = converter.convert(this.objects);
+                x.objectProperties = converter.getObjectProperties(this.objects);
+                x.layers = layers;
+                x.streamName = name;
 
-                server.apiCall(@"/api/live", Method.POST, payload, (success, response) =>
+                server.updateStream(x as ExpandoObject, (success, data) =>
                 {
-                    OnDataSent?.Invoke(this, new SpeckleEventArgs(success.ToString()));
+                    if(!success)
+                    {
+                        OnError?.Invoke(this, new SpeckleEventArgs("Failed to update stream."));
+                        return;
+                    }
+                    OnDataSent?.Invoke(this, new SpeckleEventArgs("Stream was updated."));
                 });
-
                 DataSender.Stop();
             };
 
@@ -158,17 +181,18 @@ namespace SpeckleClient
             {
                 Debug.WriteLine("SPKSENDER: Sending meta payload.");
 
-                byte[] payload = server.compressPayload(
-                    new
-                    {
-                        layers = layers,
-                        streamName = name
-                    }
-                );
+                dynamic payload = new ExpandoObject();
+                payload.layers = layers;
+                payload.streamName = name;
 
-                server.apiCall(@"/api/metadata", Method.POST, payload, (success, response) =>
+                server.updateStreamMetadata(payload as ExpandoObject, (success, response) =>
                 {
-                    OnDataSent?.Invoke(this, new SpeckleEventArgs(success.ToString()));
+                    if (!success)
+                    {
+                        OnError?.Invoke(this, new SpeckleEventArgs("Failed to update stream metadata."));
+                        return;
+                    }
+                    OnDataSent?.Invoke(this, new SpeckleEventArgs("Stream metadata was updated."));
                 });
             };
 
@@ -195,6 +219,7 @@ namespace SpeckleClient
             {
                 wsReconnecter.Start();
                 server.wsSessionId = null;
+                this.OnError?.Invoke(this, new SpeckleEventArgs("Disconnected from server."));
             };
 
             ws.OnMessage += (sender, e) =>
@@ -269,13 +294,15 @@ namespace SpeckleClient
         /// <param name="name">A specific name to save it by.</param>
         public void saveToHistory(string name = "History")
         {
-            server.apiCall(@"/api/history", Method.POST, null, (success, response) => 
+            server.createNewStreamHistory((success, data) =>
             {
-                Debug.WriteLine("Saved. Hopefully.");
-                Debug.WriteLine((string) response.message);
-                OnDataSent?.Invoke(this, new SpeckleEventArgs("history-update", response));
+                if (!success)
+                {
+                    OnError?.Invoke(this, new SpeckleEventArgs("Failed to create a new history instance."));
+                    return;
+                }
+
             });
-            //throw new NotImplementedException();
         }
 
         /// <summary>

@@ -7,7 +7,7 @@ using SpeckleClient;
 
 namespace SpeckleAbstract
 {
-    public class ExtenededReceiver : SpeckleGhReceiverClient
+    public class ExtenededReceiver : GhReceiverClient
     {
         /// <summary>
         /// Initializes a new instance of the MyComponent1 class.
