@@ -100,7 +100,7 @@ namespace SpeckleAbstract
 
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            pManager.AddTextParameter("streamId", "streamId", "Which speckle stream do you want to connect to?", GH_ParamAccess.item);
+            pManager.AddTextParameter("ID", "ID", "Which speckle stream do you want to connect to?", GH_ParamAccess.item);
         }
 
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)

@@ -554,7 +554,7 @@ namespace SpeckleGhRhConverter
             foreach (var pt in o.value.vertices) mesh.Vertices.Add(toPoint(pt));
             foreach (var cl in o.value.colors) mesh.VertexColors.Add(Color.FromArgb((int)cl));
             foreach (var fa in o.value.faces)
-                if (fa.C == fa.D) mesh.Faces.AddFace(new MeshFace(fa.A, fa.B, fa.C));
+                if (fa.C == fa.D) mesh.Faces.AddFace(new MeshFace((int)fa.A, (int) fa.B, (int) fa.C));
                 else mesh.Faces.AddFace(new MeshFace((int)fa.A, (int)fa.B, (int)fa.C, (int)fa.D));
 
             return mesh;
