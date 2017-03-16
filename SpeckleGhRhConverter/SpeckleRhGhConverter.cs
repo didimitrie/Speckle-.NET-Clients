@@ -81,7 +81,7 @@ namespace SpeckleGhRhConverter
         public override List<SpeckleObjectProperties> getObjectProperties(IEnumerable<object> objects)
         {
             var propertiesList = new List<SpeckleObjectProperties>();
-
+            var simpleProps = new List<ArchivableDictionary>();
             int k = 0;
             foreach (object o in objects)
             {
@@ -105,7 +105,7 @@ namespace SpeckleGhRhConverter
 
                 if (myObj != null)
                     if (myObj.UserDictionary.Keys.Length > 0)
-                        propertiesList.Add(new SpeckleObjectProperties(k, myObj.UserDictionary.ToArray()));
+                        propertiesList.Add(new SpeckleObjectProperties(k, myObj.UserDictionary));
 
                 k++;
             }
@@ -176,42 +176,8 @@ namespace SpeckleGhRhConverter
 
             myObj.UserDictionary.Clear();
 
-            //var dict = new Dictionary<string, object>(objectProperties); // object properties is a fucking list
-            //myObj.UserDictionary.ReplaceContentsWith(getDictionaryFromProps(objectProperties as List<ExpandoObject>));
-
-            foreach (var prop in objectProperties.properties)
-            {
-                if (prop.Value is ExpandoObject)
-                {
-                    //myObj.UserDictionary.Set((string)prop.Key, getArchivableDict(new Dictionary<string, object>((ExpandoObject) prop.Value)));
-                    myObj.UserDictionary.Set((string)prop.Key, getArchivableDict((ExpandoObject)prop.Value));
-                }
-                else
-                {
-                    
-                    try {
-                        myObj.UserDictionary.Set((string)prop.Key, (double)prop.Value);
-                    } catch { }
-
-                    try
-                    {
-                        myObj.UserDictionary.Set((string)prop.Key, (int)prop.Value);
-                    }
-                    catch { }
-
-                    try
-                    {
-                        myObj.UserDictionary.Set((string)prop.Key, (bool)prop.Value);
-                    }
-                    catch { }
-
-                    try
-                    {
-                        myObj.UserDictionary.Set((string)prop.Key, (string)prop.Value);
-                    }
-                    catch { }
-                }
-            }
+            var dict = getArchivableDict((ExpandoObject)objectProperties.properties);
+            myObj.UserDictionary.ReplaceContentsWith(dict);
 
             return myObj;
         }
@@ -224,22 +190,17 @@ namespace SpeckleGhRhConverter
                 if (kvp.Value is ExpandoObject) myDictionary.Set(kvp.Key, getArchivableDict(kvp.Value as ExpandoObject));
                 else
                 {
-
                     try
                     {
                         myDictionary.Set((string)kvp.Key, Convert.ToInt32(kvp.Value));
                     }
-                    catch
-                    {
-                    }
+                    catch { }
 
                     try
                     {
                         myDictionary.Set((string)kvp.Key, (double)kvp.Value);
                     }
                     catch { }
-
-                    
 
                     try
                     {
