@@ -13,7 +13,7 @@ using Rhino.Collections;
 
 namespace UserDataUtils
 {
-    public class SetUserDataComponent : GH_Component, IGH_VariableParameterComponent
+    public class SetUserDataComponent : GH_Component
     {
         /// <summary>
         /// Each implementation of GH_Component must provide a public 
@@ -34,7 +34,8 @@ namespace UserDataUtils
         /// </summary>
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            pManager.AddGenericParameter("Object", "O", "Object to set user data to.", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Object", "O", "Object to attach user data to.", GH_ParamAccess.item);
+            pManager.AddGenericParameter("User Data", "D", "Data to attach.", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -43,57 +44,6 @@ namespace UserDataUtils
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddGenericParameter("Object", "O", "Object with user data.", GH_ParamAccess.item);
-        }
-
-        bool IGH_VariableParameterComponent.CanInsertParameter(GH_ParameterSide side, int index)
-        {
-            if (side == GH_ParameterSide.Input && index > 0)
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        bool IGH_VariableParameterComponent.CanRemoveParameter(GH_ParameterSide side, int index)
-        {
-            //We can only remove from the input
-            if (side == GH_ParameterSide.Input && Params.Input.Count > 1 && index > 0)
-                return true;
-            else
-                return false;
-        }
-
-        IGH_Param IGH_VariableParameterComponent.CreateParameter(GH_ParameterSide side, int index)
-        {
-            Grasshopper.Kernel.Parameters.Param_GenericObject param = new Param_GenericObject();
-
-            param.Name = GH_ComponentParamServer.InventUniqueNickname("ABCDEFGHIJKLMNOPQRSTUVWXYZ", Params.Input);
-            param.NickName = param.Name;
-            param.Description = "Property Name";
-            param.Optional = false;
-            param.Access = GH_ParamAccess.item;
-
-            param.ObjectChanged += (sender, e) =>
-            {
-                Debug.WriteLine("param changed name.");
-                Rhino.RhinoApp.MainApplicationWindow.Invoke((Action)delegate { this.ExpireSolution(true); });
-            };
-
-            return param;
-        }
-
-        bool IGH_VariableParameterComponent.DestroyParameter(GH_ParameterSide side, int index)
-        {
-            if (side == GH_ParameterSide.Input && index > 0)
-                return true;
-            return false;
-        }
-
-        void IGH_VariableParameterComponent.VariableParameterMaintenance()
-        {
         }
 
 
@@ -164,48 +114,26 @@ namespace UserDataUtils
 
             myObj.UserDictionary.Clear();
 
-            for (int i = 1; i < Params.Input.Count; i++)
+            object value = null;
+            DA.GetData(1, ref value);
+
+            GH_ObjectWrapper temp = value as GH_ObjectWrapper;
+            if(temp==null)
             {
-                var key = Params.Input[i].NickName != "" ? Params.Input[i].NickName : "unnamed";
-                object value = null;
-                DA.GetData(i, ref value);
-
-                if (value != null)
-                {
-                    GH_Number nmb = value as GH_Number;
-                    if (nmb!=null)
-                        myObj.UserDictionary.Set(key, nmb.Value);
-
-                    if (value is double)
-                        myObj.UserDictionary.Set(key, (double)value);
-
-                    if (value is int)
-                        myObj.UserDictionary.Set(key, (double)value);
-
-                    GH_String str = value as GH_String;
-                    if(str!=null)
-                        myObj.UserDictionary.Set(key, str.Value);
-
-                    if (value is string)
-                        myObj.UserDictionary.Set(key, (string)value);
-
-                    GH_Boolean bol = value as GH_Boolean;
-                    if (bol != null)
-                        myObj.UserDictionary.Set(key, bol.Value);
-
-                    GH_ObjectWrapper temp = value as GH_ObjectWrapper;
-                    if (temp != null)
-                    {
-                        ArchivableDictionary dict = ((GH_ObjectWrapper)value).Value as ArchivableDictionary;
-                        if (dict != null)
-                            myObj.UserDictionary.Set(key, dict);
-                    }
-
-                    if (!myObj.UserDictionary.ContainsKey(key))
-                        this.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, key + " could not be set. Strings, numbers and ArchivableDictionary are the supported types.");
-                }
-
+                DA.SetData(0, obj);
+                this.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Could not cast object to GH_ObjectWrapper.");
+                return;
             }
+
+            ArchivableDictionary dict = ((GH_ObjectWrapper)value).Value as ArchivableDictionary;
+            if (dict == null)
+            {
+                DA.SetData(0, obj);
+                this.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Could not cast object to Dictionary.");
+                return;
+            }
+
+            myObj.UserDictionary.ReplaceContentsWith(dict);
 
             DA.SetData(0, myObj);
         }

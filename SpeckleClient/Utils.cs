@@ -320,9 +320,9 @@ namespace SpeckleClient
     public class SpeckleObjectProperties
     {
         public int objectIndex;
-        public KeyValuePair<string, object>[] properties;
+        public object properties;
 
-        public SpeckleObjectProperties(int _objectIndex, KeyValuePair<string, object>[] _properties)
+        public SpeckleObjectProperties(int _objectIndex, object _properties)
         {
             objectIndex = _objectIndex;
             properties = _properties;
