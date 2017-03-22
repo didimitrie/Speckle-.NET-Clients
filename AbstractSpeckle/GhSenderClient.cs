@@ -36,7 +36,6 @@ namespace SpeckleAbstract
               "Speckle Sender",
               "Speckle", "Speckle")
         {
-
         }
 
         public override bool Write(GH_IWriter writer)
@@ -50,7 +49,6 @@ namespace SpeckleAbstract
         public override bool Read(GH_IReader reader)
         {
             reader.TryGetString("specklesender", ref serialisedSender);
-
             return base.Read(reader);
         }
 
@@ -65,14 +63,15 @@ namespace SpeckleAbstract
             else
             {
 
-                var a =  new SpeckleClient.ServerDialog.ServerDialog();
-                //var som = new System.Windows.Interop.WindowInteropHelper(a); som.Owner= Rhino.RhinoApp.MainWindowHandle();
-                bool? result = a.ShowDialog();
+                var myForm =  new SpeckleClient.ServerDialog.ServerDialog();
+
+                //var some = new System.Windows.Interop.WindowInteropHelper(myForm); 
+                //some.Owner= Rhino.RhinoApp.MainWindowHandle();
+
+                bool? dres = myForm.ShowDialog();
                 
-                if(result==true)
-                {
-                    mySender = new SpeckleSender(a.f_apiurl, a.f_apitoken, new GhRhConveter(true, true));
-                }
+                if(dres == true)
+                    mySender = new SpeckleSender(myForm.f_apiurl, myForm.f_apitoken, new GhRhConveter(true, true));
             }
 
             if (mySender == null) return;
