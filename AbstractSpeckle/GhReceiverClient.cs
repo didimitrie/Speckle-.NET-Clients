@@ -70,12 +70,17 @@ namespace SpeckleAbstract
                 registermyReceiverEvents();
             } else
             {
-                ServerDetailsDialog myForm = new ServerDetailsDialog();
-                var result = myForm.ShowDialog();
-                if( result == System.Windows.Forms.DialogResult.OK)
+                var myForm = new SpeckleClient.ServerDialog.ServerDialog();
+
+                //var some = new System.Windows.Interop.WindowInteropHelper(myForm); 
+                //some.Owner= Rhino.RhinoApp.MainWindowHandle();
+
+                bool? dres = myForm.ShowDialog();
+
+                if (dres == true)
                 {
-                    apiUrl = myForm.url;
-                    token = myForm.token;
+                    apiUrl = myForm.f_apiurl;
+                    token = myForm.f_apitoken;
                 }
             }
 
@@ -112,6 +117,12 @@ namespace SpeckleAbstract
             string inputId = null;
             DA.GetData(0, ref inputId);
             Debug.WriteLine("StreamId: " + streamId + " Read ID: " + inputId);
+
+            if(apiUrl==null || token == null)
+            {
+                this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Failed to init. No server details.");
+                return;
+            }
 
             if (inputId == null && streamId == null)
             {
