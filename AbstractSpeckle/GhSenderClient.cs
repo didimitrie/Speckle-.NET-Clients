@@ -15,7 +15,9 @@ using SpeckleGhRhConverter;
 using System.Dynamic;
 using System.ComponentModel;
 using System.Linq;
+using System.Windows;
 using System.Windows.Forms;
+using System.Windows.Interop;
 
 namespace SpeckleAbstract
 {
@@ -62,19 +64,18 @@ namespace SpeckleAbstract
                 mySender = new SpeckleClient.SpeckleSender(serialisedSender, new GhRhConveter(true, true));
             else
             {
-                ServerDetailsDialog myForm = new ServerDetailsDialog();
 
-                var result = myForm.ShowDialog();
-                if(result == DialogResult.OK)
+                var a =  new SpeckleClient.ServerDialog.ServerDialog();
+                //var som = new System.Windows.Interop.WindowInteropHelper(a); som.Owner= Rhino.RhinoApp.MainWindowHandle();
+                bool? result = a.ShowDialog();
+                
+                if(result==true)
                 {
-                    mySender = new SpeckleSender(myForm.url, myForm.token, new GhRhConveter(true, true));
-                } else
-                {
-                    MessageBox.Show("Failed to create server.");
-                    this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Failed to initialise sender.");
-                    return;
+                    mySender = new SpeckleSender(a.f_apiurl, a.f_apitoken, new GhRhConveter(true, true));
                 }
             }
+
+            if (mySender == null) return;
 
             mySender.OnError += OnError;
 
@@ -171,6 +172,11 @@ namespace SpeckleAbstract
         /// to store data in output parameters.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+            if (mySender == null)
+            {
+                this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Failed to initialise.");
+                return;
+            }
             DA.SetData(0, mySender.getServer() + @"/streams/" + mySender.getStreamId());
             DA.SetData(1, mySender.getStreamId());
 
