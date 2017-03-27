@@ -6,6 +6,9 @@ This is one big repo containing the following libraries:
 - Speckle Grasshopper & Speckle GhRh Converter
 - Speckle Grasshopper User Data Utils 
 
+## Documentation
+It's forthcoming. [Do you want to help?](mailto:d.stefanescu@ucl.ac.uk)
+
 ## Speckle Client
 This is the base library that provides two classes that you should really care about: 
 
@@ -108,3 +111,15 @@ Right click and `Save to file` to save the output to a text file.
 #### Export to JSON (JUD)
 Spits out a json string of the dictionary array provided. Easy peasy. Use pretty formating if needing a human readable file. 
 Right click and `Save to file` to save the output to a text file.
+
+## Credits
+Developed by Dimitrie A. Stefanescu [@idid](http://twitter.com/idid) / [UCL The Bartlett](https://www.ucl.ac.uk/bartlett/) / [InnoChain](http://innochain.net)
+
+This project has received funding from the European Union’s Horizon 2020 research and innovation programme under the Marie Sklodowska-Curie grant agreement No 642877.
+
+![Bartlett](http://streams.speckle.xyz/assets/bartlett-ucl.png)
+
+![InnoChain](http://innochain.net/wp-content/uploads/logo2015.png)
+
+### License 
+MIT.
