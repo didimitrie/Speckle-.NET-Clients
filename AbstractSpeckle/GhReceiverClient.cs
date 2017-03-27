@@ -15,6 +15,9 @@ using SpeckleGhRhConverter;
 using Grasshopper;
 using Grasshopper.Kernel.Data;
 
+
+using SpecklePopup;
+
 namespace SpeckleAbstract
 {
     public class GhReceiverClient : GH_Component, IGH_VariableParameterComponent
@@ -70,12 +73,17 @@ namespace SpeckleAbstract
                 registermyReceiverEvents();
             } else
             {
-                ServerDetailsDialog myForm = new ServerDetailsDialog();
-                var result = myForm.ShowDialog();
-                if( result == System.Windows.Forms.DialogResult.OK)
+                var myForm = new SpecklePopup.MainWindow();
+
+                var some = new System.Windows.Interop.WindowInteropHelper(myForm);
+                some.Owner = Rhino.RhinoApp.MainWindowHandle();
+
+               myForm.ShowDialog();
+
+                if (myForm.restApi != null && myForm.apitoken != null)
                 {
-                    apiUrl = myForm.url;
-                    token = myForm.token;
+                    apiUrl = myForm.restApi;
+                    token = myForm.apitoken;
                 }
             }
 
@@ -112,6 +120,12 @@ namespace SpeckleAbstract
             string inputId = null;
             DA.GetData(0, ref inputId);
             Debug.WriteLine("StreamId: " + streamId + " Read ID: " + inputId);
+
+            if(apiUrl==null || token == null)
+            {
+                this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Failed to init. No server details.");
+                return;
+            }
 
             if (inputId == null && streamId == null)
             {

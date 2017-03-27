@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpeckleClient", "SpeckleCli
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserDataUtils", "UserDataUtils\UserDataUtils.csproj", "{46948630-9BB9-4624-8BF9-C866F2B52674}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpecklePopup", "SpecklePopup\SpecklePopup.csproj", "{D65594C8-EA2E-46CA-A756-B1634EDC3AE3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,14 @@ Global
 		{46948630-9BB9-4624-8BF9-C866F2B52674}.Debug64|Any CPU.Build.0 = Debug64|Any CPU
 		{46948630-9BB9-4624-8BF9-C866F2B52674}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{46948630-9BB9-4624-8BF9-C866F2B52674}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D65594C8-EA2E-46CA-A756-B1634EDC3AE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D65594C8-EA2E-46CA-A756-B1634EDC3AE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D65594C8-EA2E-46CA-A756-B1634EDC3AE3}.Debug32|Any CPU.ActiveCfg = Debug|Any CPU
+		{D65594C8-EA2E-46CA-A756-B1634EDC3AE3}.Debug32|Any CPU.Build.0 = Debug|Any CPU
+		{D65594C8-EA2E-46CA-A756-B1634EDC3AE3}.Debug64|Any CPU.ActiveCfg = Debug|Any CPU
+		{D65594C8-EA2E-46CA-A756-B1634EDC3AE3}.Debug64|Any CPU.Build.0 = Debug|Any CPU
+		{D65594C8-EA2E-46CA-A756-B1634EDC3AE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D65594C8-EA2E-46CA-A756-B1634EDC3AE3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

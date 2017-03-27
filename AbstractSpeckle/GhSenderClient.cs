@@ -15,7 +15,11 @@ using SpeckleGhRhConverter;
 using System.Dynamic;
 using System.ComponentModel;
 using System.Linq;
+using System.Windows;
 using System.Windows.Forms;
+using System.Windows.Interop;
+
+using SpecklePopup;
 
 namespace SpeckleAbstract
 {
@@ -34,7 +38,6 @@ namespace SpeckleAbstract
               "Speckle Sender",
               "Speckle", "Speckle")
         {
-
         }
 
         public override bool Write(GH_IWriter writer)
@@ -48,7 +51,6 @@ namespace SpeckleAbstract
         public override bool Read(GH_IReader reader)
         {
             reader.TryGetString("specklesender", ref serialisedSender);
-
             return base.Read(reader);
         }
 
@@ -62,19 +64,19 @@ namespace SpeckleAbstract
                 mySender = new SpeckleClient.SpeckleSender(serialisedSender, new GhRhConveter(true, true));
             else
             {
-                ServerDetailsDialog myForm = new ServerDetailsDialog();
 
-                var result = myForm.ShowDialog();
-                if(result == DialogResult.OK)
-                {
-                    mySender = new SpeckleSender(myForm.url, myForm.token, new GhRhConveter(true, true));
-                } else
-                {
-                    MessageBox.Show("Failed to create server.");
-                    this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Failed to initialise sender.");
-                    return;
-                }
+                var myForm = new SpecklePopup.MainWindow();
+
+                var some = new System.Windows.Interop.WindowInteropHelper(myForm);
+                some.Owner = Rhino.RhinoApp.MainWindowHandle();
+
+                myForm.ShowDialog();
+
+                if (myForm.restApi != null && myForm.apitoken != null)
+                    mySender = new SpeckleSender(myForm.restApi, myForm.apitoken, new GhRhConveter(true, true));
             }
+
+            if (mySender == null) return;
 
             mySender.OnError += OnError;
 
@@ -141,10 +143,10 @@ namespace SpeckleAbstract
         public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
         {
             base.AppendAdditionalMenuItems(menu);
-            //GH_DocumentObject.Menu_AppendItem(menu, @"Save current state", (sender, e) =>
-            //{
-            //    mySender.saveToHistory();
-            //});
+            GH_DocumentObject.Menu_AppendItem(menu, @"Save current state", (sender, e) =>
+            {
+                mySender.saveToHistory();
+            });
         }
 
 
@@ -171,6 +173,11 @@ namespace SpeckleAbstract
         /// to store data in output parameters.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+            if (mySender == null)
+            {
+                this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Failed to initialise.");
+                return;
+            }
             DA.SetData(0, mySender.getServer() + @"/streams/" + mySender.getStreamId());
             DA.SetData(1, mySender.getStreamId());
 
