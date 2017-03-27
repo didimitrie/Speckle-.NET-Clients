@@ -92,6 +92,10 @@
       <Project>{e967a1e1-37ff-4394-b793-6987a7958016}</Project>
       <Name>SpeckleGhRhConverter</Name>
     </ProjectReference>
+    <ProjectReference Include="..\SpecklePopup\SpecklePopup.csproj">
+      <Project>{d65594c8-ea2e-46ca-a756-b1634edc3ae3}</Project>
+      <Name>SpecklePopup</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

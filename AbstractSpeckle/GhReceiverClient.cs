@@ -15,6 +15,9 @@ using SpeckleGhRhConverter;
 using Grasshopper;
 using Grasshopper.Kernel.Data;
 
+
+using SpecklePopup;
+
 namespace SpeckleAbstract
 {
     public class GhReceiverClient : GH_Component, IGH_VariableParameterComponent
@@ -70,17 +73,17 @@ namespace SpeckleAbstract
                 registermyReceiverEvents();
             } else
             {
-                var myForm = new SpeckleClient.ServerDialog.ServerDialog();
+                var myForm = new SpecklePopup.MainWindow();
 
-                //var some = new System.Windows.Interop.WindowInteropHelper(myForm); 
-                //some.Owner= Rhino.RhinoApp.MainWindowHandle();
+                var some = new System.Windows.Interop.WindowInteropHelper(myForm);
+                some.Owner = Rhino.RhinoApp.MainWindowHandle();
 
-                bool? dres = myForm.ShowDialog();
+               myForm.ShowDialog();
 
-                if (dres == true)
+                if (myForm.restApi != null && myForm.apitoken != null)
                 {
-                    apiUrl = myForm.f_apiurl;
-                    token = myForm.f_apitoken;
+                    apiUrl = myForm.restApi;
+                    token = myForm.apitoken;
                 }
             }
 

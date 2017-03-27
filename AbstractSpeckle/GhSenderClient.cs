@@ -19,6 +19,8 @@ using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Interop;
 
+using SpecklePopup;
+
 namespace SpeckleAbstract
 {
     public class GhSenderClient : GH_Component, IGH_VariableParameterComponent
@@ -63,15 +65,15 @@ namespace SpeckleAbstract
             else
             {
 
-                var myForm =  new SpeckleClient.ServerDialog.ServerDialog();
+                var myForm = new SpecklePopup.MainWindow();
 
-                //var some = new System.Windows.Interop.WindowInteropHelper(myForm); 
-                //some.Owner= Rhino.RhinoApp.MainWindowHandle();
+                var some = new System.Windows.Interop.WindowInteropHelper(myForm);
+                some.Owner = Rhino.RhinoApp.MainWindowHandle();
 
-                bool? dres = myForm.ShowDialog();
-                
-                if(dres == true)
-                    mySender = new SpeckleSender(myForm.f_apiurl, myForm.f_apitoken, new GhRhConveter(true, true));
+                myForm.ShowDialog();
+
+                if (myForm.restApi != null && myForm.apitoken != null)
+                    mySender = new SpeckleSender(myForm.restApi, myForm.apitoken, new GhRhConveter(true, true));
             }
 
             if (mySender == null) return;
@@ -141,10 +143,10 @@ namespace SpeckleAbstract
         public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
         {
             base.AppendAdditionalMenuItems(menu);
-            //GH_DocumentObject.Menu_AppendItem(menu, @"Save current state", (sender, e) =>
-            //{
-            //    mySender.saveToHistory();
-            //});
+            GH_DocumentObject.Menu_AppendItem(menu, @"Save current state", (sender, e) =>
+            {
+                mySender.saveToHistory();
+            });
         }
 
 
