@@ -16,7 +16,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using System.Web.Script.Serialization;
+using Newtonsoft.Json;
 
 namespace SpecklePopup
 {
@@ -164,8 +164,6 @@ namespace SpecklePopup
             this.validateInputs(this, null);
             if (!validationCheckPass) return;
 
-            var jss = new JavaScriptSerializer();
-
             bool userCreated = false;
 
             using (var client = new WebClient())
@@ -173,10 +171,11 @@ namespace SpecklePopup
                 try
                 {
                     string rawPingReply = client.DownloadString(server);
-                    var pingReply = jss.Deserialize<Dictionary<string, string>>(rawPingReply);
+                    dynamic pingReply = JsonConvert.DeserializeObject(rawPingReply);
+                    //jss.Deserialize<Dictionary<string, string>>(rawPingReply);
 
-                    this.serverName = pingReply["serverName"];
-                    this.restApi = pingReply["restApi"];
+                    this.serverName = pingReply.serverName;
+                    this.restApi = pingReply.restApi;
 
                     Dictionary<string, string> newUser = new Dictionary<string, string>();
                     newUser.Add("email", email);
@@ -188,7 +187,7 @@ namespace SpecklePopup
 
                     try
                     {
-                        rawUserReply = client.UploadString(new Uri(this.restApi + "/accounts/register"), "POST",  jss.Serialize(newUser));
+                        rawUserReply = client.UploadString(new Uri(this.restApi + "/accounts/register"), "POST",  JsonConvert.SerializeObject(newUser, Formatting.None));
                     }
                     catch (WebException err_user)
                     {
@@ -198,12 +197,12 @@ namespace SpecklePopup
                         return;
                     }
 
-                    var userReply = jss.Deserialize<Dictionary<string, string>>(rawUserReply);
+                    dynamic userReply = JsonConvert.DeserializeObject(rawUserReply); //jss.Deserialize<Dictionary<string, string>>(rawUserReply);
 
-                    if(userReply["success"] == "True" )
+                    if(userReply.success == "True" )
                     {
 
-                        this.apitoken = userReply["apitoken"];
+                        this.apitoken = userReply.apitoken;
                         userCreated = true;
                         saveAccountToDisk(this.email, this.apitoken, this.serverName, this.restApi, this.server.ToString());
 
@@ -213,7 +212,7 @@ namespace SpecklePopup
                     }
                     else
                     {
-                        MessageBox.Show(userReply["message"]);
+                        MessageBox.Show(userReply.message);
                         userCreated = false;
                         return;
                     }
