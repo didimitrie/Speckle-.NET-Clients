@@ -51,8 +51,8 @@ namespace SpecklePopup
                 {
                     string content = File.ReadAllText(file);
                     string[] pieces = content.TrimEnd('\r', '\n').Split(',');
-                    
-                    accounts.Add(new SpeckleAccount() { email = pieces[0], apiToken = pieces[1], serverName = pieces[2], restApi = pieces[3], rootUrl=pieces[4] });
+
+                    accounts.Add(new SpeckleAccount() { email = pieces[0], apiToken = pieces[1], serverName = pieces[2], restApi = pieces[3], rootUrl = pieces[4] });
                 }
 
             var gridView = new GridView();
@@ -78,7 +78,8 @@ namespace SpecklePopup
             {
                 existingAccounts.Items.Add(new SpeckleAccount() { email = "No existing accounts found." });
                 Dispatcher.BeginInvoke((Action)(() => tabControl.SelectedIndex = 1));
-            } else
+            }
+            else
             {
                 Dispatcher.BeginInvoke((Action)(() => tabControl.SelectedIndex = 0));
             }
@@ -187,7 +188,7 @@ namespace SpecklePopup
 
                     try
                     {
-                        rawUserReply = client.UploadString(new Uri(this.restApi + "/accounts/register"), "POST",  JsonConvert.SerializeObject(newUser, Formatting.None));
+                        rawUserReply = client.UploadString(new Uri(this.restApi + "/accounts/register"), "POST", JsonConvert.SerializeObject(newUser, Formatting.None));
                     }
                     catch (WebException err_user)
                     {
@@ -199,7 +200,7 @@ namespace SpecklePopup
 
                     dynamic userReply = JsonConvert.DeserializeObject(rawUserReply); //jss.Deserialize<Dictionary<string, string>>(rawUserReply);
 
-                    if(userReply.success == "True" )
+                    if (userReply.success == "True")
                     {
 
                         this.apitoken = userReply.apitoken;
@@ -221,7 +222,10 @@ namespace SpecklePopup
                 catch (WebException err_ping)
                 {
                     // failed to ping server.
-                    MessageBox.Show("Failed to contact server. Did you provide in the correct url? " + err_ping.Response.ToString() );
+                    if (err_ping.Response != null)
+                        MessageBox.Show("Failed to contact server. Did you provide in the correct url? " + err_ping.Response.ToString());
+                    else
+                        MessageBox.Show("Failed to contact server. Did you provide in the correct url? " + err_ping.ToString());
                     userCreated = false;
                     return;
                 }
@@ -237,7 +241,7 @@ namespace SpecklePopup
 
             strPath = strPath + @"\SpeckleSettings\";
 
-            string fileName = _email + "." + _apitoken.Substring(0,4) + ".txt";
+            string fileName = _email + "." + _apitoken.Substring(0, 4) + ".txt";
 
             string content = _email + "," + _apitoken + "," + _serverName + "," + _restApi + "," + _rootUrl;
 
@@ -269,7 +273,7 @@ namespace SpecklePopup
 
         private void UseSelected(object sender, RoutedEventArgs e)
         {
-            if(this.existingAccounts.SelectedIndex == -1)
+            if (this.existingAccounts.SelectedIndex == -1)
             {
                 MessageBox.Show("Please select an account first.");
                 return;

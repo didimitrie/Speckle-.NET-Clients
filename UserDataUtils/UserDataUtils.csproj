@@ -72,12 +72,41 @@
     <Compile Include="FilterUserDataComponent.cs" />
     <Compile Include="ExpandUserDataComponent.cs" />
     <Compile Include="JsonUserData.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
     <Compile Include="SetUserDataComponent.cs" />
     <Compile Include="UserDataUtilsInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\CreateUserData.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\csv.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\ExpandUserData.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\GetUserData.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\json.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\SetUserData.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
@@ -89,7 +118,7 @@
   -->
   <PropertyGroup>
     <PostBuildEvent>Copy "$(TargetPath)" "$(TargetDir)$(ProjectName).gha"
-copy /Y "$(TargetDir)$(ProjectName).gha" "%25AppData%25\Grasshopper\Libraries\AbstractSpeckle\$(ProjectName).gha"</PostBuildEvent>
+copy /Y "$(TargetDir)$(ProjectName).gha" "%25AppData%25\Grasshopper\Libraries\UserDataUtils\$(ProjectName).gha"</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug32|AnyCPU' ">
     <StartArguments>
