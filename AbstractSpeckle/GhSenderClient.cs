@@ -20,6 +20,7 @@ using System.Windows.Forms;
 using System.Windows.Interop;
 
 using SpecklePopup;
+using SpeckleAbstract.Properties;
 
 namespace SpeckleAbstract
 {
@@ -299,9 +300,8 @@ namespace SpeckleAbstract
         {
             get
             {
-                // You can add image files to your project resources and access them like this:
-                //return Resources.IconForThisComponent;
-                return null;
+                return Resources.sender_2;
+                //return null;
             }
         }
 
