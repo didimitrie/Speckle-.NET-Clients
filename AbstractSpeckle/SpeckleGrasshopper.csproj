@@ -124,7 +124,7 @@
   -->
   <PropertyGroup>
     <PostBuildEvent>Copy "$(TargetPath)" "$(TargetDir)$(ProjectName).gha"
-copy /Y "$(TargetDir)$(ProjectName).gha" "%25AppData%25\Grasshopper\Libraries\AbstractSpeckle\$(ProjectName).gha"</PostBuildEvent>
+copy /Y "$(TargetDir)$(ProjectName).gha" "%25AppData%25\Grasshopper\Libraries\SpeckleSendReceive\$(ProjectName).gha"</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug32|AnyCPU' ">
     <StartArguments>
