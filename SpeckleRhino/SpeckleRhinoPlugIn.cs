@@ -34,8 +34,6 @@ namespace SpeckleRhino
         /// </summary>
         public SpeckleRhinoUserControl PanelUserControl { get; set; }
 
-        public SpeckleRhinoAgent SpeckleAgent { get; set;}
-
         /// <summary>
         /// Called when the plug-in is being loaded.
         /// </summary>

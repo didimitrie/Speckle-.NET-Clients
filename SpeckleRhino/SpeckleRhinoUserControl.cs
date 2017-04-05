@@ -50,5 +50,15 @@ namespace SpeckleRhino
                 return typeof(SpeckleRhinoUserControl).GUID;
             }
         }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            
+            if (!string.IsNullOrEmpty(textBox1.Text))
+            {
+                var rec = new SpeckleRhinoReceiver(textBox1.Text);
+            }
+            
+        }
     }
 }
